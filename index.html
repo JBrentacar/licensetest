@@ -7,8 +7,39 @@
   <style>
     body { font-family: sans-serif; padding: 1rem; }
     label { display: block; margin: .5rem 0; }
-    #canvas { border:1px solid #ccc; width: 100%; height: auto; cursor: crosshair; }
     .color-btn { width:2rem; height:2rem; border:none; margin-right:.5rem; cursor:pointer; }
+    /* モーダルウィンドウ */
+    #canvasModal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    #canvasModal .modal-content {
+      position: relative;
+      background: #fff;
+      padding: 1rem;
+      max-width: 90%; max-height: 90%;
+      overflow: auto;
+      box-sizing: border-box;
+    }
+    #close-modal {
+      position: absolute;
+      top: 0.5rem; right: 0.5rem;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    #canvas {
+      border: 1px solid #ccc;
+      width: 100%; height: auto;
+      cursor: crosshair;
+    }
   </style>
 </head>
 <body>
@@ -31,16 +62,25 @@
 
     <label>貸出時走行距離 (km)：<input type="number" name="mileage" required></label>
 
-    <p>傷チェック （赤／黒ペンで描画してください）</p>
-    <div>
-      <button type="button" id="color-red" class="color-btn" style="background:red;"></button>
-      <button type="button" id="color-black" class="color-btn" style="background:black;"></button>
-    </div>
-    <canvas id="canvas"></canvas>
+    <!-- モーダル表示用ボタン -->
+    <button type="button" id="open-modal" style="margin: .5rem 0;">車両画像を描画</button>
 
     <input type="file" name="annotated_image" id="annotated_image" style="display:none;">
     <button type="submit" style="margin-top:1rem;">送信する</button>
+
   </form>
+
+  <!-- モーダル本体 -->
+  <div id="canvasModal">
+    <div class="modal-content">
+      <button type="button" id="close-modal">&times;</button>
+      <canvas id="canvas"></canvas>
+      <div style="margin-top: .5rem;">
+        <button type="button" id="color-red" class="color-btn" style="background:red;"></button>
+        <button type="button" id="color-black" class="color-btn" style="background:black;"></button>
+      </div>
+    </div>
+  </div>
 
   <script src="https://unpkg.com/fabric@4.6.0/dist/fabric.min.js"></script>
   <script>
@@ -105,30 +145,38 @@
     "56": { manufacturer: "日産",     car_model: "クリッパー（黒）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "6961" }
   };
 
-
     document.getElementById("management_number").addEventListener("input", e => {
       const info = carData[e.target.value] || {};
-      ["manufacturer","car_model","prefecture","class_no","hiragana","serial_no"]
-        .forEach(id => document.getElementById(id).value = info[id] || "");
+      ["manufacturer","car_model","prefecture","class_no","hiragana","serial_no"].forEach(id => {
+        document.getElementById(id).value = info[id] || "";
+      });
     });
 
-    // 2) Fabric.js キャンバス初期化
-    const canvas = new fabric.Canvas("canvas", { isDrawingMode: true });
-    let bgImage, origW, origH;
+    // 2) モーダルの開閉
+    const modal = document.getElementById("canvasModal");
+    document.getElementById("open-modal").onclick = () => {
+      modal.style.display = "flex";
+      enableDrawing();
+    };
+    document.getElementById("close-modal").onclick = () => {
+      modal.style.display = "none";
+      disableDrawing();
+    };
 
+    // 3) Fabric.js キャンバス初期化
+    const canvas = new fabric.Canvas("canvas", { isDrawingMode: false });
+    let bgImage, origW, origH;
     function setBackground() {
       fabric.Image.fromURL("carcheck.png", img => {
-        origW = img.width;
-        origH = img.height;
+        origW = img.width; origH = img.height;
         img.set({ selectable: false, originX: "left", originY: "top" });
         bgImage = img;
         canvas.setBackgroundImage(bgImage, canvas.renderAll.bind(canvas));
         resizeCanvas();
       });
     }
-
     function resizeCanvas() {
-      const cw = document.body.clientWidth;
+      const cw = window.innerWidth * 0.9;  // モーダル幅の90%
       const aspect = origH / origW;
       const newW = cw;
       const newH = newW * aspect;
@@ -137,19 +185,30 @@
       bgImage.scaleToWidth(newW);
       canvas.renderAll();
     }
-
     setBackground();
-    window.addEventListener("resize", resizeCanvas);
+    window.addEventListener("resize", () => {
+      if (modal.style.display === "flex") resizeCanvas();
+    });
 
-    // 3) ペン設定＆色切替
+    // 4) ドローイングモード切替
+    function enableDrawing() {
+      canvas.isDrawingMode = true;
+    }
+    function disableDrawing() {
+      canvas.isDrawingMode = false;
+    }
+
+    // ペン設定
     canvas.freeDrawingBrush.width = 3;
     canvas.freeDrawingBrush.color = "red";
     document.getElementById("color-red").onclick   = () => canvas.freeDrawingBrush.color = "red";
     document.getElementById("color-black").onclick = () => canvas.freeDrawingBrush.color = "black";
 
-    // 4) フォーム送信時にCanvasをBlob化してファイル入力にセット
+    // 5) フォーム送信時にCanvasをBlob化してファイル入力にセット
     document.getElementById("rental-form").addEventListener("submit", function(e) {
       e.preventDefault();
+      // 描画モードOFFにしてレンダリング
+      canvas.isDrawingMode = false;
       canvas.discardActiveObject();
       canvas.renderAll();
       canvas.toBlob(blob => {
