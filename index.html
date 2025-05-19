@@ -7,7 +7,7 @@
   <style>
     body { font-family: sans-serif; padding: 1rem; }
     label { display: block; margin: .5rem 0; }
-    #canvas { border:1px solid #ccc; cursor: crosshair; }
+    #canvas { border:1px solid #ccc; width: 100%; height: auto; cursor: crosshair; }
     .color-btn { width:2rem; height:2rem; border:none; margin-right:.5rem; cursor:pointer; }
   </style>
 </head>
@@ -18,61 +18,34 @@
         method="POST"
         enctype="multipart/form-data">
 
-    <label>ご契約名義：
-      <input type="text" name="contract_name" required>
-    </label>
+    <label>ご契約名義：<input type="text" name="contract_name" required></label>
+    <label>メールアドレス：<input type="email" name="email" required></label>
+    <label>管理番号：<input type="number" id="management_number" name="management_number" required></label>
 
-    <label>メールアドレス：
-      <input type="email" name="email" required>
-    </label>
+    <label>メーカー：<input type="text" id="manufacturer" name="manufacturer" readonly></label>
+    <label>車種：<input type="text" id="car_model" name="car_model" readonly></label>
+    <label>県名：<input type="text" id="prefecture" name="prefecture" readonly></label>
+    <label>分類番号：<input type="text" id="class_no" name="class_no" readonly></label>
+    <label>ひらがな：<input type="text" id="hiragana" name="hiragana" readonly></label>
+    <label>一連指定番号：<input type="text" id="serial_no" name="serial_no" readonly></label>
 
-    <label>管理番号：
-      <input type="number" id="management_number" name="management_number" required>
-    </label>
-
-    <!-- 自動入力フィールド -->
-    <label>メーカー：
-      <input type="text" id="manufacturer" name="manufacturer" readonly>
-    </label>
-    <label>車種：
-      <input type="text" id="car_model" name="car_model" readonly>
-    </label>
-    <label>県名：
-      <input type="text" id="prefecture" name="prefecture" readonly>
-    </label>
-    <label>分類番号：
-      <input type="text" id="class_no" name="class_no" readonly>
-    </label>
-    <label>ひらがな：
-      <input type="text" id="hiragana" name="hiragana" readonly>
-    </label>
-    <label>一連指定番号：
-      <input type="text" id="serial_no" name="serial_no" readonly>
-    </label>
-
-    <label>貸出時走行距離 (km)：
-      <input type="number" name="mileage" required>
-    </label>
+    <label>貸出時走行距離 (km)：<input type="number" name="mileage" required></label>
 
     <p>傷チェック （赤／黒ペンで描画してください）</p>
     <div>
-      <button type="button" class="color-btn" id="color-red"   style="background:red;"></button>
-      <button type="button" class="color-btn" id="color-black" style="background:black;"></button>
+      <button type="button" id="color-red" class="color-btn" style="background:red;"></button>
+      <button type="button" id="color-black" class="color-btn" style="background:black;"></button>
     </div>
-    <canvas id="canvas" width="600" height="400"></canvas>
+    <canvas id="canvas"></canvas>
 
-    <!-- 送信用の隠しファイル入力 -->
     <input type="file" name="annotated_image" id="annotated_image" style="display:none;">
-
     <button type="submit" style="margin-top:1rem;">送信する</button>
   </form>
 
-  <!-- Fabric.js を使用 -->
-
-<script src="https://unpkg.com/fabric@4.6.0/dist/fabric.min.js"></script>
-<script>
-  // 1) 管理番号 ⇔ 車両情報マッピング
-  const carData = {
+  <script src="https://unpkg.com/fabric@4.6.0/dist/fabric.min.js"></script>
+  <script>
+    // 1) 管理番号 ⇔ 車両情報マッピング
+   const carData = {
     "1":  { manufacturer: "ホンダ",   car_model: "ライフ（薄茶）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4520" },
     "2":  { manufacturer: "日産",     car_model: "廃車トッポ（茶色）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4521" },
     "3":  { manufacturer: "ホンダ",   car_model: "ライフ（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4522" },
@@ -132,43 +105,60 @@
     "56": { manufacturer: "日産",     car_model: "クリッパー（黒）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "6961" }
   };
 
-  // 2) フィールド自動入力
-  document.getElementById("management_number").addEventListener("input", e => {
-    const info = carData[e.target.value] || {};
-    ["manufacturer","car_model","prefecture","class_no","hiragana","serial_no"]
-      .forEach(id => document.getElementById(id).value = info[id] || "");
-  });
 
-  // 3) Fabric.js キャンバス初期化＆A4縦サイズ動的リサイズ
-  const canvas = new fabric.Canvas("canvas", { isDrawingMode: true });
-  fabric.Image.fromURL("carcheck.png", img => {
-    // 画像サイズに合わせてキャンバスをリサイズ
-    canvas.setWidth(img.width);
-    canvas.setHeight(img.height);
-    img.set({ selectable: false, originX: "left", originY: "top" });
-    canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
-  });
-
-  // 4) ペン設定＆色切替
-  canvas.freeDrawingBrush.width = 3;
-  canvas.freeDrawingBrush.color = "red";
-  document.getElementById("color-red").onclick   = () => canvas.freeDrawingBrush.color = "red";
-  document.getElementById("color-black").onclick = () => canvas.freeDrawingBrush.color = "black";
-
-  // 5) 送信時にCanvasをBlob化→隠し<input>にセット
-  document.getElementById("rental-form").addEventListener("submit", function(e) {
-    e.preventDefault();
-    canvas.discardActiveObject();
-    canvas.renderAll();
-    canvas.toBlob(blob => {
-      const dt = new DataTransfer();
-      dt.items.add(new File([blob], "carcheck_annotated.png", { type: "image/png" }));
-      document.getElementById("annotated_image").files = dt.files;
-      e.target.submit();
+    document.getElementById("management_number").addEventListener("input", e => {
+      const info = carData[e.target.value] || {};
+      ["manufacturer","car_model","prefecture","class_no","hiragana","serial_no"]
+        .forEach(id => document.getElementById(id).value = info[id] || "");
     });
-  });
-</script>
-```
 
+    // 2) Fabric.js キャンバス初期化
+    const canvas = new fabric.Canvas("canvas", { isDrawingMode: true });
+    let bgImage, origW, origH;
+
+    function setBackground() {
+      fabric.Image.fromURL("carcheck.png", img => {
+        origW = img.width;
+        origH = img.height;
+        img.set({ selectable: false, originX: "left", originY: "top" });
+        bgImage = img;
+        canvas.setBackgroundImage(bgImage, canvas.renderAll.bind(canvas));
+        resizeCanvas();
+      });
+    }
+
+    function resizeCanvas() {
+      const cw = document.body.clientWidth;
+      const aspect = origH / origW;
+      const newW = cw;
+      const newH = newW * aspect;
+      canvas.setWidth(newW);
+      canvas.setHeight(newH);
+      bgImage.scaleToWidth(newW);
+      canvas.renderAll();
+    }
+
+    setBackground();
+    window.addEventListener("resize", resizeCanvas);
+
+    // 3) ペン設定＆色切替
+    canvas.freeDrawingBrush.width = 3;
+    canvas.freeDrawingBrush.color = "red";
+    document.getElementById("color-red").onclick   = () => canvas.freeDrawingBrush.color = "red";
+    document.getElementById("color-black").onclick = () => canvas.freeDrawingBrush.color = "black";
+
+    // 4) フォーム送信時にCanvasをBlob化してファイル入力にセット
+    document.getElementById("rental-form").addEventListener("submit", function(e) {
+      e.preventDefault();
+      canvas.discardActiveObject();
+      canvas.renderAll();
+      canvas.toBlob(blob => {
+        const dt = new DataTransfer();
+        dt.items.add(new File([blob], "carcheck_annotated.png", { type: "image/png" }));
+        document.getElementById("annotated_image").files = dt.files;
+        e.target.submit();
+      });
+    });
+  </script>
 </body>
 </html>
