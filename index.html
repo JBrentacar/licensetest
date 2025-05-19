@@ -181,11 +181,20 @@
       if (last) canvas.remove(last);
     };
 
-    // ペン色切替
-    canvas.freeDrawingBrush.width = 3;
-    canvas.freeDrawingBrush.color = "red";
-    document.getElementById("color-red").onclick   = () => canvas.freeDrawingBrush.color = "red";
-    document.getElementById("color-black").onclick = "black";
+// ペン色切替
+canvas.freeDrawingBrush.width = 3;
+canvas.freeDrawingBrush.color = "red";
+
+// 赤ペン
+document.getElementById("color-red").addEventListener("click", () => {
+  canvas.freeDrawingBrush.color = "red";
+});
+
+// 黒ペン
+document.getElementById("color-black").addEventListener("click", () => {
+  canvas.freeDrawingBrush.color = "black";
+});
+
 
     // 描画完了
     document.getElementById("finish-button").onclick = () => {
