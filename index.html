@@ -5,77 +5,85 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>車両キズチェックフォーム</title>
   <style>
-    body { font-family: sans-serif; padding: 1rem; }
-    label { display: block; margin: .5rem 0; }
-    .color-btn { width:2rem; height:2rem; border:none; margin-right:.5rem; cursor:pointer; }
+    body { font-family: sans-serif; padding: 1rem; background: #f9f9f9; }
+    form { max-width: 600px; margin: auto; background: #fff; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; margin-bottom: .5rem; font-weight: bold; }
+    .form-group input { width: 100%; padding: .5rem; border: 1px solid #ccc; border-radius: 4px; }
+    .form-group input:focus { outline: none; border-color: #007bff; }
+    #open-modal { background: #28a745; color: #fff; border-radius: 4px; padding: .5rem 1rem; }
+    #submit-btn { width: 100%; background-color: #007bff; color: #fff; font-size: 1rem; border-radius: 4px; padding: .75rem; }
+    .color-btn { width:2rem; height:2rem; border:1px solid #ccc; margin-right:.5rem; cursor:pointer; border-radius:4px; }
     /* モーダルウィンドウ */
-    #canvasModal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-    }
-    #canvasModal .modal-content {
-      position: relative;
-      background: #fff;
-      padding: 1rem;
-      max-width: 90%; max-height: 90%;
-      overflow: auto;
-      box-sizing: border-box;
-    }
-    #close-modal {
-      position: absolute;
-      top: 0.5rem; right: 0.5rem;
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-    }
-    #canvas {
-      border: 1px solid #ccc;
-      width: 100%; height: auto;
-      cursor: crosshair;
-    }
+    #canvasModal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:1000; }
+    #canvasModal .modal-content { position: relative; background:#fff; padding:1rem; max-width:90%; max-height:90%; overflow:auto; border-radius:8px; }
+    #close-modal, #finish-modal, #undo-btn { background:none; border:none; font-size:1rem; cursor:pointer; margin-right:1rem; }
+    #close-modal { position:absolute; top:0.5rem; right:0.5rem; font-size:1.5rem; }
+    #finish-modal { background:#007bff; color:#fff; padding:.5rem 1rem; border-radius:4px; }
+    #undo-btn { background:#ffc107; color:#000; padding:.5rem 1rem; border-radius:4px; }
+    #canvas { border:1px solid #ccc; width:100%; height:auto; cursor:crosshair; }
   </style>
 </head>
 <body>
-  <h1>貸出前 車両キズチェック</h1>
-  <form id="rental-form"
-        action="https://ssgform.com/s/yhd7UavRZK6V"
-        method="POST"
-        enctype="multipart/form-data">
-
-    <label>ご契約名義：<input type="text" name="contract_name" required></label>
-    <label>メールアドレス：<input type="email" name="email" required></label>
-    <label>管理番号：<input type="number" id="management_number" name="management_number" required></label>
-
-    <label>メーカー：<input type="text" id="manufacturer" name="manufacturer" readonly></label>
-    <label>車種：<input type="text" id="car_model" name="car_model" readonly></label>
-    <label>県名：<input type="text" id="prefecture" name="prefecture" readonly></label>
-    <label>分類番号：<input type="text" id="class_no" name="class_no" readonly></label>
-    <label>ひらがな：<input type="text" id="hiragana" name="hiragana" readonly></label>
-    <label>一連指定番号：<input type="text" id="serial_no" name="serial_no" readonly></label>
-
-    <label>貸出時走行距離 (km)：<input type="number" name="mileage" required></label>
-
-    <!-- モーダル表示用ボタン -->
-    <button type="button" id="open-modal" style="margin: .5rem 0;">車両画像を描画</button>
-
+  <h1 style="text-align:center;">貸出前 車両キズチェック</h1>
+  <form id="rental-form" action="https://ssgform.com/s/yhd7UavRZK6V" method="POST" enctype="multipart/form-data">
+    <div class="form-group">
+      <label for="contract_name">ご契約名義</label>
+      <input type="text" id="contract_name" name="contract_name" required>
+    </div>
+    <div class="form-group">
+      <label for="email">メールアドレス</label>
+      <input type="email" id="email" name="email" required>
+    </div>
+    <div class="form-group">
+      <label for="management_number">管理番号</label>
+      <input type="number" id="management_number" name="management_number" required>
+    </div>
+    <div class="form-group">
+      <label for="manufacturer">メーカー</label>
+      <input type="text" id="manufacturer" name="manufacturer" readonly>
+    </div>
+    <div class="form-group">
+      <label for="car_model">車種</label>
+      <input type="text" id="car_model" name="car_model" readonly>
+    </div>
+    <div class="form-group">
+      <label for="prefecture">県名</label>
+      <input type="text" id="prefecture" name="prefecture" readonly>
+    </div>
+    <div class="form-group">
+      <label for="class_no">分類番号</label>
+      <input type="text" id="class_no" name="class_no" readonly>
+    </div>
+    <div class="form-group">
+      <label for="hiragana">ひらがな</label>
+      <input type="text" id="hiragana" name="hiragana" readonly>
+    </div>
+    <div class="form-group">
+      <label for="serial_no">一連指定番号</label>
+      <input type="text" id="serial_no" name="serial_no" readonly>
+    </div>
+    <div class="form-group">
+      <label for="mileage">貸出時走行距離 (km)</label>
+      <input type="number" id="mileage" name="mileage" required>
+    </div>
+    <div class="form-group">
+      <button type="button" id="open-modal">車両画像を描画</button>
+    </div>
     <input type="file" name="annotated_image" id="annotated_image" style="display:none;">
-    <button type="submit" style="margin-top:1rem;">送信する</button>
-
+    <div class="form-group">
+      <button type="submit" id="submit-btn">送信する</button>
+    </div>
   </form>
 
   <!-- モーダル本体 -->
   <div id="canvasModal">
     <div class="modal-content">
       <button type="button" id="close-modal">&times;</button>
+      <button type="button" id="finish-modal">完了</button>
+      <button type="button" id="undo-btn">1手戻る</button>
       <canvas id="canvas"></canvas>
-      <div style="margin-top: .5rem;">
+      <div style="margin-top: .5rem;">色選択：
         <button type="button" id="color-red" class="color-btn" style="background:red;"></button>
         <button type="button" id="color-black" class="color-btn" style="background:black;"></button>
       </div>
@@ -85,87 +93,80 @@
   <script src="https://unpkg.com/fabric@4.6.0/dist/fabric.min.js"></script>
   <script>
     // 1) 管理番号 ⇔ 車両情報マッピング
-   const carData = {
-    "1":  { manufacturer: "ホンダ",   car_model: "ライフ（薄茶）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4520" },
-    "2":  { manufacturer: "日産",     car_model: "廃車トッポ（茶色）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4521" },
-    "3":  { manufacturer: "ホンダ",   car_model: "ライフ（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4522" },
-    "4":  { manufacturer: "ホンダ",   car_model: "ライフ（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4523" },
-    "5":  { manufacturer: "スバル",   car_model: "廃車ステラ（ベージュ）",   prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4524" },
-    "6":  { manufacturer: "ホンダ",   car_model: "ライフ（グレー）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4525" },
-    "7":  { manufacturer: "マツダ",   car_model: "AZワゴン（シルバー）",     prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4526" },
-    "8":  { manufacturer: "日産",     car_model: "ピノ（白）",               prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4527" },
-    "9":  { manufacturer: "ホンダ",   car_model: "フィット(白)",             prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2212" },
-    "10": { manufacturer: "ホンダ",   car_model: "フィット（黒）",           prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2636" },
-    "11": { manufacturer: "トヨタ",   car_model: "ヴィッツ（シルバー）",     prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2292" },
-    "12": { manufacturer: "ホンダ",   car_model: "ライフ（赤茶色）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4558" },
-    "13": { manufacturer: "ダイハツ", car_model: "ハイゼット（白）",         prefecture: "宮城", class_no: "480", hiragana: "わ", serial_no: "5191" },
-    "14": { manufacturer: "ホンダ",   car_model: "フィットハイブリッド（シルバー）", prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2392" },
-    "15": { manufacturer: "ホンダ",   car_model: "ライフ（ベージュ色）",     prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4593" },
-    "16": { manufacturer: "スズキ",   car_model: "アルトラパン",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4594" },
-    "17": { manufacturer: "スズキ",   car_model: "セルボ",                   prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4595" },
-    "18": { manufacturer: "スズキ",   car_model: "ワゴンR",                   prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4615" },
-    "19": { manufacturer: "ホンダ",   car_model: "フィットハイブリッド（シルバー）", prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2401" },
-    "20": { manufacturer: "ホンダ",   car_model: "ライフ（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4619" },
-    "21": { manufacturer: "ホンダ",   car_model: "バモス（茶色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4633" },
-    "22": { manufacturer: "日産",     car_model: "モコ（茶色）",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4662" },
-    "23": { manufacturer: "ダイハツ", car_model: "ミラ（シルバー）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4664" },
-    "24": { manufacturer: "ホンダ",   car_model: "フィットハイブリッド（白）", prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2559" },
-    "25": { manufacturer: "スズキ",   car_model: "アルト（緑系）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4752" },
-    "26": { manufacturer: "スズキ",   car_model: "アルト（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4753" },
-    "27": { manufacturer: "ダイハツ", car_model: "ミラ（ピンク）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4770" },
-    "28": { manufacturer: "日産",     car_model: "オッティ（白）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4771" },
-    "29": { manufacturer: "スバル",   car_model: "プレオバン（シルバー）",   prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5381" },
-    "30": { manufacturer: "スズキ",   car_model: "アルト（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4830" },
-    "99": { manufacturer: "ダイハツ", car_model: "ハイゼット（ダンプ型）",   prefecture: "宮城", class_no: "480", hiragana: "わ", serial_no: "5389" },
-    "31": { manufacturer: "日産",     car_model: "オッティ（水色）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4892" },
-    "32": { manufacturer: "スバル",   car_model: "プレオバン（白）",         prefecture: "宮城", class_no: "480", hiragana: "わ", serial_no: "5450" },
-    "33": { manufacturer: "ダイハツ", car_model: "エッセ（クリーム色）",     prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4986" },
-    "34": { manufacturer: "ホンダ",   car_model: "ライフ（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5019" },
-    "35": { manufacturer: "スズキ",   car_model: "MRワゴン",                  prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5021" },
-    "36": { manufacturer: "三菱",     car_model: "eKワゴン",                  prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5020" },
-    "37": { manufacturer: "スズキ",   car_model: "MRワゴン（水色）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5035" },
-    "38": { manufacturer: "スバル",   car_model: "ステラ（白）",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5102" },
-    "39": { manufacturer: "スズキ",   car_model: "アルト（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5115" },
-    "40": { manufacturer: "ダイハツ", car_model: "ムーブ（黒色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5271" },
-    "41": { manufacturer: "スズキ",   car_model: "アルト（ベージュ）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5307" },
-    "42": { manufacturer: "日産",     car_model: "オッティ（黒色）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5313" },
-    "43": { manufacturer: "ホンダ",   car_model: "ライフ（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5323" },
-    "44": { manufacturer: "ホンダ",   car_model: "ライフ（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5330" },
-    "45": { manufacturer: "スズキ",   car_model: "アルト（茶色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5348" },
-    "46": { manufacturer: "三菱",     car_model: "eKワゴン(白)",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5357" },
-    "47": { manufacturer: "ダイハツ", car_model: "ミラ（白）",               prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5393" },
-    "48": { manufacturer: "スズキ",   car_model: "アルトラパン（茶）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5463" },
-    "49": { manufacturer: "スズキ",   car_model: "アルト(茶)",               prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5510" },
-    "50": { manufacturer: "ホンダ",   car_model: "フィット（黄色）",         prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "3456" },
-    "51": { manufacturer: "日産",     car_model: "モコ（ピンク）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5558" },
-    "52": { manufacturer: "マツダ",   car_model: "ファミリア",               prefecture: "宮城", class_no: "401", hiragana: "わ", serial_no: "1675" },
-    "53": { manufacturer: "スズキ",   car_model: "ワゴンR（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5710" },
-    "54": { manufacturer: "ダイハツ", car_model: "エッセ（黒）",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5723" },
-    "55": { manufacturer: "スズキ",   car_model: "ラパン（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5765" },
-    "56": { manufacturer: "日産",     car_model: "クリッパー（黒）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "6961" }
-  };
+    const carData = {
+  "1":  { manufacturer: "ホンダ",    car_model: "ライフ（薄茶）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4520" },
+  "2":  { manufacturer: "日産",      car_model: "廃車トッポ（茶色）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4521" },
+  "3":  { manufacturer: "ホンダ",    car_model: "ライフ（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4522" },
+  "4":  { manufacturer: "ホンダ",    car_model: "ライフ（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4523" },
+  "5":  { manufacturer: "スバル",    car_model: "廃車ステラ（ベージュ）",   prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4524" },
+  "6":  { manufacturer: "ホンダ",    car_model: "ライフ（グレー）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4525" },
+  "7":  { manufacturer: "マツダ",    car_model: "AZワゴン（シルバー）",     prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4526" },
+  "8":  { manufacturer: "日産",      car_model: "ピノ（白）",               prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4527" },
+  "9":  { manufacturer: "ホンダ",    car_model: "フィット(白)",             prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2212" },
+  "10": { manufacturer: "ホンダ",    car_model: "フィット（黒）",           prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2636" },
+  "11": { manufacturer: "トヨタ",    car_model: "ヴィッツ（シルバー）",     prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2292" },
+  "12": { manufacturer: "ホンダ",    car_model: "ライフ（赤茶色）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4558" },
+  "13": { manufacturer: "ダイハツ",  car_model: "ハイゼット（白）",         prefecture: "宮城", class_no: "480", hiragana: "わ", serial_no: "5191" },
+  "14": { manufacturer: "ホンダ",    car_model: "フィットハイブリッド（シルバー）", prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2392" },
+  "15": { manufacturer: "ホンダ",    car_model: "ライフ（ベージュ色）",     prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4593" },
+  "16": { manufacturer: "スズキ",    car_model: "アルトラパン",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4594" },
+  "17": { manufacturer: "スズキ",    car_model: "セルボ",                   prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4595" },
+  "18": { manufacturer: "スズキ",    car_model: "ワゴンR",                   prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4615" },
+  "19": { manufacturer: "ホンダ",    car_model: "フィットハイブリッド（シルバー）", prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2401" },
+  "20": { manufacturer: "ホンダ",    car_model: "ライフ（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4619" },
+  "21": { manufacturer: "ホンダ",    car_model: "バモス（茶色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4633" },
+  "22": { manufacturer: "日産",      car_model: "モコ（茶色）",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4662" },
+  "23": { manufacturer: "ダイハツ",  car_model: "ミラ（シルバー）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4664" },
+  "24": { manufacturer: "ホンダ",    car_model: "フィットハイブリッド（白）", prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2559" },
+  "25": { manufacturer: "スズキ",    car_model: "アルト（緑系）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4752" },
+  "26": { manufacturer: "スズキ",    car_model: "アルト（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4753" },
+  "27": { manufacturer: "ダイハツ",  car_model: "ミラ（ピンク）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4770" },
+  "28": { manufacturer: "日産",      car_model: "オッティ（白）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4771" },
+  "29": { manufacturer: "スバル",    car_model: "プレオバン（シルバー）",   prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5381" },
+  "30": { manufacturer: "スズキ",    car_model: "アルト（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4830" },
+  "99": { manufacturer: "ダイハツ",  car_model: "ハイゼット（ダンプ型）",   prefecture: "宮城", class_no: "480", hiragana: "わ", serial_no: "5389" },
+  "31": { manufacturer: "日産",      car_model: "オッティ（水色）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4892" },
+  "32": { manufacturer: "スバル",    car_model: "プレオバン（白）",         prefecture: "宮城", class_no: "480", hiragana: "わ", serial_no: "5450" },
+  "33": { manufacturer: "ダイハツ",  car_model: "エッセ（クリーム色）",     prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4986" },
+  "34": { manufacturer: "ホンダ",    car_model: "ライフ（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5019" },
+  "35": { manufacturer: "スズキ",    car_model: "MRワゴン",                  prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5021" },
+  "36": { manufacturer: "三菱",      car_model: "eKワゴン",                  prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5020" },
+  "37": { manufacturer: "スズキ",    car_model: "MRワゴン（水色）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5035" },
+  "38": { manufacturer: "スバル",    car_model: "ステラ（白）",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5102" },
+  "39": { manufacturer: "スズキ",    car_model: "アルト（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5115" },
+  "40": { manufacturer: "ダイハツ",  car_model: "ムーブ（黒色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5271" },
+  "41": { manufacturer: "スズキ",    car_model: "アルト（ベージュ）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5307" },
+  "42": { manufacturer: "日産",      car_model: "オッティ（黒色）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5313" },
+  "43": { manufacturer: "ホンダ",    car_model: "ライフ（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5323" },
+  "44": { manufacturer: "ホンダ",    car_model: "ライフ（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5330" },
+  "45": { manufacturer: "スズキ",    car_model: "アルト（茶色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5348" },
+  "46": { manufacturer: "三菱",      car_model: "eKワゴン(白)",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5357" },
+  "47": { manufacturer: "ダイハツ",  car_model: "ミラ（白）",               prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5393" },
+  "48": { manufacturer: "スズキ",    car_model: "アルトラパン（茶）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5463" },
+  "49": { manufacturer: "スズキ",    car_model: "アルト(茶)",               prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5510" },
+  "50": { manufacturer: "ホンダ",    car_model: "フィット（黄色）",         prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "3456" },
+  "51": { manufacturer: "日産",      car_model: "モコ（ピンク）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5558" },
+  "52": { manufacturer: "マツダ",    car_model: "ファミリア",               prefecture: "宮城", class_no: "401", hiragana: "わ", serial_no: "1675" },
+  "53": { manufacturer: "スズキ",    car_model: "ワゴンR（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5710" },
+  "54": { manufacturer: "ダイハツ",  car_model: "エッセ（黒）",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5723" },
+  "55": { manufacturer: "スズキ",    car_model: "ラパン（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5765" },
+  "56": { manufacturer: "日産",      car_model: "クリッパー（黒）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "6961" }
+};
 
-    document.getElementById("management_number").addEventListener("input", e => {
-      const info = carData[e.target.value] || {};
-      ["manufacturer","car_model","prefecture","class_no","hiragana","serial_no"].forEach(id => {
-        document.getElementById(id).value = info[id] || "";
-      });
-    });
 
-    // 2) モーダルの開閉
+    // 2) モーダル開閉 & ドローイング制御
     const modal = document.getElementById("canvasModal");
-    document.getElementById("open-modal").onclick = () => {
-      modal.style.display = "flex";
-      enableDrawing();
-    };
-    document.getElementById("close-modal").onclick = () => {
-      modal.style.display = "none";
-      disableDrawing();
-    };
+    const openBtn = document.getElementById("open-modal");
+    const closeBtn = document.getElementById("close-modal");
+    const finishBtn = document.getElementById("finish-modal");
+    const undoBtn = document.getElementById("undo-btn");
+
+    openBtn.onclick = () => { modal.style.display = "flex"; enableDrawing(); };
+    closeBtn.onclick = finishBtn.onclick = () => { modal.style.display = "none"; disableDrawing(); };
 
     // 3) Fabric.js キャンバス初期化
     const canvas = new fabric.Canvas("canvas", { isDrawingMode: false });
-    let bgImage, origW, origH;
+    let bgImage, origW, origH, undoStack = [];
     function setBackground() {
       fabric.Image.fromURL("carcheck.png", img => {
         origW = img.width; origH = img.height;
@@ -176,38 +177,32 @@
       });
     }
     function resizeCanvas() {
-      const cw = window.innerWidth * 0.9;  // モーダル幅の90%
+      const cw = window.innerWidth * 0.9;
       const aspect = origH / origW;
-      const newW = cw;
-      const newH = newW * aspect;
-      canvas.setWidth(newW);
-      canvas.setHeight(newH);
-      bgImage.scaleToWidth(newW);
+      canvas.setWidth(cw);
+      canvas.setHeight(cw * aspect);
+      bgImage.scaleToWidth(cw);
       canvas.renderAll();
     }
     setBackground();
-    window.addEventListener("resize", () => {
-      if (modal.style.display === "flex") resizeCanvas();
-    });
+    window.addEventListener("resize", () => modal.style.display === "flex" && resizeCanvas());
 
-    // 4) ドローイングモード切替
-    function enableDrawing() {
-      canvas.isDrawingMode = true;
-    }
-    function disableDrawing() {
-      canvas.isDrawingMode = false;
-    }
-
-    // ペン設定
+    // 4) 描画モード & Undo
+    function enableDrawing() { canvas.isDrawingMode = true; }
+    function disableDrawing() { canvas.isDrawingMode = false; }
     canvas.freeDrawingBrush.width = 3;
     canvas.freeDrawingBrush.color = "red";
     document.getElementById("color-red").onclick   = () => canvas.freeDrawingBrush.color = "red";
     document.getElementById("color-black").onclick = () => canvas.freeDrawingBrush.color = "black";
+    canvas.on('path:created', e => { undoStack.push(e.path); });
+    undoBtn.onclick = () => {
+      const last = undoStack.pop();
+      if (last) { canvas.remove(last); canvas.renderAll(); }
+    };
 
-    // 5) フォーム送信時にCanvasをBlob化してファイル入力にセット
+    // 5) フォーム送信: Canvas → Blob → File
     document.getElementById("rental-form").addEventListener("submit", function(e) {
       e.preventDefault();
-      // 描画モードOFFにしてレンダリング
       canvas.isDrawingMode = false;
       canvas.discardActiveObject();
       canvas.renderAll();
