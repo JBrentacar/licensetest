@@ -5,94 +5,71 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>車両キズチェックフォーム</title>
   <style>
-    body { font-family: sans-serif; padding: 1rem; background: #f9f9f9; }
-    form { max-width: 600px; margin: auto; background: #fff; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    .form-group { margin-bottom: 1rem; }
-    .form-group label { display: block; margin-bottom: .5rem; font-weight: bold; }
-    .form-group input { width: 100%; padding: .5rem; border: 1px solid #ccc; border-radius: 4px; }
-    .form-group input:focus { outline: none; border-color: #007bff; }
-    #open-modal { background: #28a745; color: #fff; border-radius: 4px; padding: .5rem 1rem; }
-    #submit-btn { width: 100%; background-color: #007bff; color: #fff; font-size: 1rem; border-radius: 4px; padding: .75rem; }
-    .color-btn { width:2rem; height:2rem; border:1px solid #ccc; margin-right:.5rem; cursor:pointer; border-radius:4px; }
-    /* モーダルウィンドウ */
-    #canvasModal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:1000; }
-    #canvasModal .modal-content { position: relative; background:#fff; padding:1rem; max-width:90%; max-height:90%; overflow:auto; border-radius:8px; }
-    #close-modal, #finish-modal, #undo-btn { background:none; border:none; font-size:1rem; cursor:pointer; margin-right:1rem; }
-    #close-modal { position:absolute; top:0.5rem; right:0.5rem; font-size:1.5rem; }
-    #finish-modal { background:#007bff; color:#fff; padding:.5rem 1rem; border-radius:4px; }
-    #undo-btn { background:#ffc107; color:#000; padding:.5rem 1rem; border-radius:4px; }
+    body { font-family: sans-serif; padding: 1rem; }
+    form { max-width: 600px; margin: auto; }
+    label { display: block; margin-bottom: .75rem; }
+    input[type="text"], input[type="email"], input[type="number"] {
+      width: 100%; padding: .5rem; border: 1px solid #ccc;
+      border-radius: 4px; font-size: 1rem; box-sizing: border-box;
+      margin-top: .25rem;
+    }
+    button { font-size: 1rem; padding: .5rem 1rem; border-radius: 4px;
+      border: 1px solid #444; cursor: pointer; background: #fff;
+    }
+    .color-btn { width:2rem; height:2rem; border:none; margin-right:.5rem; cursor:pointer; }
+    /* モーダル */
+    #canvasModal { display:none; position:fixed; top:0; left:0;
+      width:100%; height:100%; background: rgba(0,0,0,0.8);
+      justify-content:center; align-items:center; z-index:1000;
+    }
+    #canvasModal .modal-content {
+      position:relative; background:#fff; padding:1rem;
+      max-width:90%; max-height:90%; overflow:auto; box-sizing:border-box;
+    }
+    #close-modal {
+      position:absolute; top:.5rem; right:.5rem; background:none;
+      border:none; font-size:1.5rem; cursor:pointer;
+    }
     #canvas { border:1px solid #ccc; width:100%; height:auto; cursor:crosshair; }
+    #modal-controls { margin-top:.5rem; display:flex; gap:.5rem; }
   </style>
 </head>
 <body>
-  <h1 style="text-align:center;">貸出前 車両キズチェック</h1>
+  <h1>貸出前 車両キズチェック</h1>
   <form id="rental-form" action="https://ssgform.com/s/yhd7UavRZK6V" method="POST" enctype="multipart/form-data">
-    <div class="form-group">
-      <label for="contract_name">ご契約名義</label>
-      <input type="text" id="contract_name" name="contract_name" required>
-    </div>
-    <div class="form-group">
-      <label for="email">メールアドレス</label>
-      <input type="email" id="email" name="email" required>
-    </div>
-    <div class="form-group">
-      <label for="management_number">管理番号</label>
-      <input type="number" id="management_number" name="management_number" required>
-    </div>
-    <div class="form-group">
-      <label for="manufacturer">メーカー</label>
-      <input type="text" id="manufacturer" name="manufacturer" readonly>
-    </div>
-    <div class="form-group">
-      <label for="car_model">車種</label>
-      <input type="text" id="car_model" name="car_model" readonly>
-    </div>
-    <div class="form-group">
-      <label for="prefecture">県名</label>
-      <input type="text" id="prefecture" name="prefecture" readonly>
-    </div>
-    <div class="form-group">
-      <label for="class_no">分類番号</label>
-      <input type="text" id="class_no" name="class_no" readonly>
-    </div>
-    <div class="form-group">
-      <label for="hiragana">ひらがな</label>
-      <input type="text" id="hiragana" name="hiragana" readonly>
-    </div>
-    <div class="form-group">
-      <label for="serial_no">一連指定番号</label>
-      <input type="text" id="serial_no" name="serial_no" readonly>
-    </div>
-    <div class="form-group">
-      <label for="mileage">貸出時走行距離 (km)</label>
-      <input type="number" id="mileage" name="mileage" required>
-    </div>
-    <div class="form-group">
-      <button type="button" id="open-modal">車両画像を描画</button>
-    </div>
+    <label>ご契約名義<input type="text" name="contract_name" required placeholder="契約者のお名前"></label>
+    <label>メールアドレス<input type="email" name="email" required placeholder="example@example.com"></label>
+    <label>管理番号<input type="number" id="management_number" name="management_number" required placeholder="1～56を入力"></label>
+    
+    <label>メーカー<input type="text" id="manufacturer" name="manufacturer" readonly></label>
+    <label>車種<input type="text" id="car_model" name="car_model" readonly></label>
+    <label>県名<input type="text" id="prefecture" name="prefecture" readonly></label>
+    <label>分類番号<input type="text" id="class_no" name="class_no" readonly></label>
+    <label>ひらがな<input type="text" id="hiragana" name="hiragana" readonly></label>
+    <label>一連指定番号<input type="text" id="serial_no" name="serial_no" readonly></label>
+    
+    <label>貸出時走行距離(km)<input type="number" name="mileage" required placeholder="例:12345"></label>
+    
+    <button type="button" id="open-modal" style="margin:1rem 0;">車両画像を描画</button>
     <input type="file" name="annotated_image" id="annotated_image" style="display:none;">
-    <div class="form-group">
-      <button type="submit" id="submit-btn">送信する</button>
-    </div>
+    <button type="submit" style="margin-top:1rem;">送信する</button>
   </form>
 
-  <!-- モーダル本体 -->
   <div id="canvasModal">
     <div class="modal-content">
-      <button type="button" id="close-modal">&times;</button>
-      <button type="button" id="finish-modal">完了</button>
-      <button type="button" id="undo-btn">1手戻る</button>
+      <button id="close-modal" type="button">&times;</button>
       <canvas id="canvas"></canvas>
-      <div style="margin-top: .5rem;">色選択：
+      <div id="modal-controls">
         <button type="button" id="color-red" class="color-btn" style="background:red;"></button>
         <button type="button" id="color-black" class="color-btn" style="background:black;"></button>
+        <button type="button" id="undo-button">元に戻す</button>
+        <button type="button" id="finish-button">描画完了</button>
       </div>
     </div>
   </div>
 
   <script src="https://unpkg.com/fabric@4.6.0/dist/fabric.min.js"></script>
   <script>
-    // 1) 管理番号 ⇔ 車両情報マッピング
     const carData = {
   "1":  { manufacturer: "ホンダ",    car_model: "ライフ（薄茶）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4520" },
   "2":  { manufacturer: "日産",      car_model: "廃車トッポ（茶色）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4521" },
@@ -154,19 +131,22 @@
 };
 
 
-    // 2) モーダル開閉 & ドローイング制御
+    // 管理番号入力で自動フィールド埋め
+    document.getElementById("management_number").addEventListener("input", e => {
+      const info = carData[e.target.value] || {};
+      ["manufacturer","car_model","prefecture","class_no","hiragana","serial_no"].forEach(id => {
+        document.getElementById(id).value = info[id] || "";
+      });
+    });
+
+    // モーダル開閉
     const modal = document.getElementById("canvasModal");
-    const openBtn = document.getElementById("open-modal");
-    const closeBtn = document.getElementById("close-modal");
-    const finishBtn = document.getElementById("finish-modal");
-    const undoBtn = document.getElementById("undo-btn");
+    document.getElementById("open-modal").onclick = () => { modal.style.display = "flex"; enableDrawing(); };
+    document.getElementById("close-modal").onclick = () => { modal.style.display = "none"; disableDrawing(); };
 
-    openBtn.onclick = () => { modal.style.display = "flex"; enableDrawing(); };
-    closeBtn.onclick = finishBtn.onclick = () => { modal.style.display = "none"; disableDrawing(); };
-
-    // 3) Fabric.js キャンバス初期化
+    // Fabric.js キャンバス初期化
     const canvas = new fabric.Canvas("canvas", { isDrawingMode: false });
-    let bgImage, origW, origH, undoStack = [];
+    let bgImage, origW, origH;
     function setBackground() {
       fabric.Image.fromURL("carcheck.png", img => {
         origW = img.width; origH = img.height;
@@ -179,33 +159,43 @@
     function resizeCanvas() {
       const cw = window.innerWidth * 0.9;
       const aspect = origH / origW;
-      canvas.setWidth(cw);
-      canvas.setHeight(cw * aspect);
-      bgImage.scaleToWidth(cw);
+      const newW = cw;
+      const newH = newW * aspect;
+      canvas.setWidth(newW);
+      canvas.setHeight(newH);
+      bgImage.scaleToWidth(newW);
       canvas.renderAll();
     }
     setBackground();
-    window.addEventListener("resize", () => modal.style.display === "flex" && resizeCanvas());
+    window.addEventListener("resize", () => { if (modal.style.display === "flex") resizeCanvas(); });
 
-    // 4) 描画モード & Undo
+    // ドローイングモード切替 & Undo履歴
+    let history = [];
+    canvas.on('path:created', function(event) {
+      history.push(event.path);
+    });
     function enableDrawing() { canvas.isDrawingMode = true; }
     function disableDrawing() { canvas.isDrawingMode = false; }
+    document.getElementById("undo-button").onclick = () => {
+      const last = history.pop();
+      if (last) canvas.remove(last);
+    };
+
+    // ペン色切替
     canvas.freeDrawingBrush.width = 3;
     canvas.freeDrawingBrush.color = "red";
     document.getElementById("color-red").onclick   = () => canvas.freeDrawingBrush.color = "red";
-    document.getElementById("color-black").onclick = () => canvas.freeDrawingBrush.color = "black";
-    canvas.on('path:created', e => { undoStack.push(e.path); });
-    undoBtn.onclick = () => {
-      const last = undoStack.pop();
-      if (last) { canvas.remove(last); canvas.renderAll(); }
+    document.getElementById("color-black").onclick = "black";
+
+    // 描画完了
+    document.getElementById("finish-button").onclick = () => {
+      canvas.isDrawingMode = false;
+      modal.style.display = "none";
     };
 
-    // 5) フォーム送信: Canvas → Blob → File
+    // 送信時Blob化
     document.getElementById("rental-form").addEventListener("submit", function(e) {
-      e.preventDefault();
-      canvas.isDrawingMode = false;
-      canvas.discardActiveObject();
-      canvas.renderAll();
+      e.preventDefault(); canvas.isDrawingMode = false; canvas.discardActiveObject(); canvas.renderAll();
       canvas.toBlob(blob => {
         const dt = new DataTransfer();
         dt.items.add(new File([blob], "carcheck_annotated.png", { type: "image/png" }));
