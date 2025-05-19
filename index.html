@@ -161,12 +161,16 @@
       position: relative; 
       background: #fff; 
       padding: 1.5rem;
-      max-width: 90%; 
-      max-height: 90%; 
-      overflow: auto; 
+      width: 90%;
+      height: 90%;
+      max-width: 1200px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
       box-sizing: border-box;
       border-radius: 8px;
       box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+      overflow: hidden; /* スクロールを防止 */
     }
     
     #close-modal {
@@ -188,9 +192,12 @@
     #canvas { 
       border: 1px solid var(--border-color); 
       width: 100%; 
-      height: auto; 
+      height: auto;
+      flex: 1;
       cursor: crosshair;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      display: block;
+      margin: 0 auto;
     }
     
     #modal-controls { 
@@ -200,6 +207,7 @@
       gap: .75rem; 
       justify-content: center;
       align-items: center;
+      flex-shrink: 0;
     }
     
     #modal-title {
@@ -511,16 +519,18 @@
       }
     });
 
-     // 背景画像設定
+    // 背景画像設定
     function setBackground() {
       fabric.Image.fromURL("carcheck.png", img => {
         origW = img.width || 800; 
         origH = img.height || 600;
         
+        // 画像を180度回転（上下逆を修正）
         img.set({ 
           selectable: false, 
           originX: "left", 
-          originY: "top" 
+          originY: "top",
+          angle: 180 // 画像を180度回転
         });
         
         bgImage = img;
@@ -532,17 +542,37 @@
     // キャンバスリサイズ
     function resizeCanvas() {
       const modalContent = document.querySelector('.modal-content');
-      const maxWidth = modalContent.clientWidth - 40; // パディングを考慮
+      const modalWidth = modalContent.clientWidth - 40; // パディングを考慮
+      const modalHeight = modalContent.clientHeight - 200; // ヘッダーとコントロール部分の高さを考慮
       
-      const aspect = origH / origW;
-      const newW = Math.min(maxWidth, origW);
-      const newH = newW * aspect;
+      // 画像のアスペクト比を維持しながら、モーダル内に収まる最大サイズを計算
+      const imgRatio = origH / origW;
+      const containerRatio = modalHeight / modalWidth;
+      
+      let newW, newH;
+      
+      if (containerRatio > imgRatio) {
+        // 横幅に合わせる
+        newW = modalWidth;
+        newH = newW * imgRatio;
+      } else {
+        // 高さに合わせる
+        newH = modalHeight;
+        newW = newH / imgRatio;
+      }
       
       canvas.setWidth(newW);
       canvas.setHeight(newH);
       
       if (bgImage) {
+        // 画像をキャンバスのサイズに合わせてスケール
         bgImage.scaleToWidth(newW);
+        
+        // 画像の中心点をキャンバスの中心に設定（回転時に使用）
+        bgImage.originX = 'center';
+        bgImage.originY = 'center';
+        bgImage.left = newW / 2;
+        bgImage.top = newH / 2;
       }
       
       canvas.renderAll();
