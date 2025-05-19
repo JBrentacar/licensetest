@@ -5,72 +5,410 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>車両キズチェックフォーム</title>
   <style>
-    body { font-family: sans-serif; padding: 1rem; }
-    form { max-width: 600px; margin: auto; }
-    label { display: block; margin-bottom: .75rem; }
-    input[type="text"], input[type="email"], input[type="number"] {
-      width: 100%; padding: .5rem; border: 1px solid #ccc;
-      border-radius: 4px; font-size: 1rem; box-sizing: border-box;
-      margin-top: .25rem;
+    /* 基本スタイル */
+    :root {
+      --primary-color: #3498db;
+      --secondary-color: #2980b9;
+      --accent-color: #e74c3c;
+      --light-gray: #f8f9fa;
+      --border-color: #ddd;
+      --text-color: #333;
     }
-    button { font-size: 1rem; padding: .5rem 1rem; border-radius: 4px;
-      border: 1px solid #444; cursor: pointer; background: #fff;
+    
+    body { 
+      font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif; 
+      padding: 1rem; 
+      margin: 0;
+      color: var(--text-color);
+      background-color: var(--light-gray);
     }
-    .color-btn { width:2rem; height:2rem; border:none; margin-right:.5rem; cursor:pointer; }
-    /* モーダル */
-    #canvasModal { display:none; position:fixed; top:0; left:0;
-      width:100%; height:100%; background: rgba(0,0,0,0.8);
-      justify-content:center; align-items:center; z-index:1000;
+    
+    h1 {
+      color: var(--secondary-color);
+      text-align: center;
+      margin: 1rem 0 2rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 3px solid var(--primary-color);
     }
+    
+    /* フォームスタイル */
+    form { 
+      max-width: 600px; 
+      margin: auto; 
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+    
+    label { 
+      display: block; 
+      margin-bottom: .5rem; 
+      font-weight: 600;
+      color: var(--text-color);
+    }
+    
+    input[type="text"], 
+    input[type="email"], 
+    input[type="number"] {
+      width: 100%; 
+      padding: .75rem; 
+      border: 1px solid var(--border-color);
+      border-radius: 4px; 
+      font-size: 1rem; 
+      box-sizing: border-box;
+      transition: border-color 0.3s;
+    }
+    
+    input[type="text"]:focus, 
+    input[type="email"]:focus, 
+    input[type="number"]:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    }
+    
+    input[readonly] {
+      background-color: var(--light-gray);
+      color: #666;
+    }
+    
+    /* ボタンスタイル */
+    .btn {
+      font-size: 1rem; 
+      padding: .75rem 1.5rem; 
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.1s;
+      font-weight: 600;
+      display: inline-block;
+    }
+    
+    .btn:active {
+      transform: translateY(1px);
+    }
+    
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background-color: var(--secondary-color);
+    }
+    
+    .btn-secondary {
+      background-color: white;
+      color: var(--primary-color);
+      border: 1px solid var(--primary-color);
+    }
+    
+    .btn-secondary:hover {
+      background-color: rgba(52, 152, 219, 0.1);
+    }
+    
+    .btn-submit {
+      background-color: var(--accent-color);
+      color: white;
+      width: 100%;
+      margin-top: 1.5rem;
+    }
+    
+    .btn-submit:hover {
+      background-color: #c0392b;
+    }
+    
+    .color-btn { 
+      width: 2.5rem; 
+      height: 2.5rem; 
+      border: none; 
+      margin-right: .5rem; 
+      cursor: pointer;
+      border-radius: 50%;
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+    
+    .color-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    
+    .color-btn.active {
+      box-shadow: 0 0 0 3px white, 0 0 0 5px var(--primary-color);
+    }
+    
+    /* モーダルスタイル */
+    #canvasModal { 
+      display: none; 
+      position: fixed; 
+      top: 0; 
+      left: 0;
+      width: 100%; 
+      height: 100%; 
+      background: rgba(0,0,0,0.8);
+      justify-content: center; 
+      align-items: center; 
+      z-index: 1000;
+    }
+    
     #canvasModal .modal-content {
-      position:relative; background:#fff; padding:1rem;
-      max-width:90%; max-height:90%; overflow:auto; box-sizing:border-box;
+      position: relative; 
+      background: #fff; 
+      padding: 1.5rem;
+      max-width: 90%; 
+      max-height: 90%; 
+      overflow: auto; 
+      box-sizing: border-box;
+      border-radius: 8px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     }
+    
     #close-modal {
-      position:absolute; top:.5rem; right:.5rem; background:none;
-      border:none; font-size:1.5rem; cursor:pointer;
+      position: absolute; 
+      top: .5rem; 
+      right: .5rem; 
+      background: none;
+      border: none; 
+      font-size: 1.5rem; 
+      cursor: pointer;
+      color: #666;
+      z-index: 10;
     }
-    #canvas { border:1px solid #ccc; width:100%; height:auto; cursor:crosshair; }
-    #modal-controls { margin-top:.5rem; display:flex; gap:.5rem; }
+    
+    #close-modal:hover {
+      color: var(--accent-color);
+    }
+    
+    #canvas { 
+      border: 1px solid var(--border-color); 
+      width: 100%; 
+      height: auto; 
+      cursor: crosshair;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    #modal-controls { 
+      margin-top: 1rem; 
+      display: flex; 
+      flex-wrap: wrap;
+      gap: .75rem; 
+      justify-content: center;
+      align-items: center;
+    }
+    
+    #modal-title {
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 1rem;
+      color: var(--text-color);
+    }
+    
+    #modal-instructions {
+      margin-bottom: 1rem;
+      color: #666;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+    
+    #drawing-controls {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    
+    .control-group {
+      display: flex;
+      gap: 0.5rem;
+      margin: 0 0.5rem;
+    }
+    
+    .btn-group {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    
+    /* レスポンシブ調整 */
+    @media (max-width: 640px) {
+      form {
+        padding: 1.5rem;
+      }
+      
+      h1 {
+        font-size: 1.5rem;
+      }
+      
+      #modal-controls {
+        flex-direction: column;
+      }
+      
+      .btn {
+        padding: 0.6rem 1.2rem;
+      }
+      
+      .color-btn {
+        width: 2rem;
+        height: 2rem;
+      }
+    }
+    
+    /* ユーティリティクラス */
+    .text-center {
+      text-align: center;
+    }
+    
+    .mt-1 {
+      margin-top: 1rem;
+    }
+    
+    .mb-1 {
+      margin-bottom: 1rem;
+    }
+    
+    .required:after {
+      content: "*";
+      color: var(--accent-color);
+      margin-left: 4px;
+    }
+    
+    .loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255,255,255,0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    
+    .loading.active {
+      visibility: visible;
+      opacity: 1;
+    }
+    
+    .spinner {
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid var(--primary-color);
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
   <h1>貸出前 車両キズチェック</h1>
+  
   <form id="rental-form" action="https://ssgform.com/s/yhd7UavRZK6V" method="POST" enctype="multipart/form-data">
-    <label>ご契約名義<input type="text" name="contract_name" required placeholder="契約者のお名前"></label>
-    <label>メールアドレス<input type="email" name="email" required placeholder="example@example.com"></label>
-    <label>管理番号<input type="number" id="management_number" name="management_number" required placeholder="1～56を入力"></label>
+    <div class="form-group">
+      <label class="required">ご契約名義</label>
+      <input type="text" name="contract_name" required placeholder="契約者のお名前">
+    </div>
     
-    <label>メーカー<input type="text" id="manufacturer" name="manufacturer" readonly></label>
-    <label>車種<input type="text" id="car_model" name="car_model" readonly></label>
-    <label>県名<input type="text" id="prefecture" name="prefecture" readonly></label>
-    <label>分類番号<input type="text" id="class_no" name="class_no" readonly></label>
-    <label>ひらがな<input type="text" id="hiragana" name="hiragana" readonly></label>
-    <label>一連指定番号<input type="text" id="serial_no" name="serial_no" readonly></label>
+    <div class="form-group">
+      <label class="required">メールアドレス</label>
+      <input type="email" name="email" required placeholder="example@example.com">
+    </div>
     
-    <label>貸出時走行距離(km)<input type="number" name="mileage" required placeholder="例:12345"></label>
+    <div class="form-group">
+      <label class="required">管理番号</label>
+      <input type="number" id="management_number" name="management_number" required placeholder="1～56を入力">
+    </div>
     
-    <button type="button" id="open-modal" style="margin:1rem 0;">車両画像を描画</button>
+    <div class="form-group">
+      <label>メーカー</label>
+      <input type="text" id="manufacturer" name="manufacturer" readonly>
+    </div>
+    
+    <div class="form-group">
+      <label>車種</label>
+      <input type="text" id="car_model" name="car_model" readonly>
+    </div>
+    
+    <div class="form-group">
+      <label>県名</label>
+      <input type="text" id="prefecture" name="prefecture" readonly>
+    </div>
+    
+    <div class="form-group">
+      <label>分類番号</label>
+      <input type="text" id="class_no" name="class_no" readonly>
+    </div>
+    
+    <div class="form-group">
+      <label>ひらがな</label>
+      <input type="text" id="hiragana" name="hiragana" readonly>
+    </div>
+    
+    <div class="form-group">
+      <label>一連指定番号</label>
+      <input type="text" id="serial_no" name="serial_no" readonly>
+    </div>
+    
+    <div class="form-group">
+      <label class="required">貸出時走行距離(km)</label>
+      <input type="number" name="mileage" required placeholder="例:12345">
+    </div>
+    
+    <div class="text-center mt-1">
+      <button type="button" id="open-modal" class="btn btn-primary">車両キズを記録する</button>
+    </div>
+    
     <input type="file" name="annotated_image" id="annotated_image" style="display:none;">
-    <button type="submit" style="margin-top:1rem;">送信する</button>
+    
+    <button type="submit" id="submit-button" class="btn btn-submit">送信する</button>
   </form>
 
   <div id="canvasModal">
     <div class="modal-content">
       <button id="close-modal" type="button">&times;</button>
+      <h3 id="modal-title">車両キズチェック</h3>
+      <p id="modal-instructions">車両の傷や損傷箇所を図に描き込んでください。赤ペンで既存のキズ、黒ペンで新しいキズを描いてください。</p>
+      
       <canvas id="canvas"></canvas>
+      
       <div id="modal-controls">
-        <button type="button" id="color-red" class="color-btn" style="background:red;"></button>
-        <button type="button" id="color-black" class="color-btn" style="background:black;"></button>
-        <button type="button" id="undo-button">元に戻す</button>
-        <button type="button" id="finish-button">描画完了</button>
+        <div id="drawing-controls">
+          <div class="control-group">
+            <button type="button" id="color-red" class="color-btn active" style="background:red;" title="赤ペン（既存のキズ）"></button>
+            <button type="button" id="color-black" class="color-btn" style="background:black;" title="黒ペン（新しいキズ）"></button>
+          </div>
+        </div>
+        
+        <div class="btn-group">
+          <button type="button" id="undo-button" class="btn btn-secondary">元に戻す</button>
+          <button type="button" id="finish-button" class="btn btn-primary">描画完了</button>
+        </div>
       </div>
     </div>
+  </div>
+  
+  <div class="loading" id="loading-spinner">
+    <div class="spinner"></div>
   </div>
 
   <script src="https://unpkg.com/fabric@4.6.0/dist/fabric.min.js"></script>
   <script>
-    const carData = {
+    // 車両データ
+   const carData = {
   "1":  { manufacturer: "ホンダ",    car_model: "ライフ（薄茶）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4520" },
   "2":  { manufacturer: "日産",      car_model: "廃車トッポ（茶色）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4521" },
   "3":  { manufacturer: "ホンダ",    car_model: "ライフ（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4522" },
@@ -131,87 +469,262 @@
 };
 
 
-    // 管理番号入力で自動フィールド埋め
-    document.getElementById("management_number").addEventListener("input", e => {
-      const info = carData[e.target.value] || {};
-      ["manufacturer","car_model","prefecture","class_no","hiragana","serial_no"].forEach(id => {
-        document.getElementById(id).value = info[id] || "";
-      });
-    });
-
-    // モーダル開閉
+    // DOM要素
     const modal = document.getElementById("canvasModal");
-    document.getElementById("open-modal").onclick = () => { modal.style.display = "flex"; enableDrawing(); };
-    document.getElementById("close-modal").onclick = () => { modal.style.display = "none"; disableDrawing(); };
+    const managementNumber = document.getElementById("management_number");
+    const openModalBtn = document.getElementById("open-modal");
+    const closeModalBtn = document.getElementById("close-modal");
+    const finishBtn = document.getElementById("finish-button");
+    const undoBtn = document.getElementById("undo-button");
+    const colorRedBtn = document.getElementById("color-red");
+    const colorBlackBtn = document.getElementById("color-black");
+    const rentalForm = document.getElementById("rental-form");
+    const submitBtn = document.getElementById("submit-button");
+    const loadingSpinner = document.getElementById("loading-spinner");
+    const annotatedImage = document.getElementById("annotated_image");
 
     // Fabric.js キャンバス初期化
-    const canvas = new fabric.Canvas("canvas", { isDrawingMode: false });
+    const canvas = new fabric.Canvas("canvas", { 
+      isDrawingMode: true,
+      selection: false
+    });
+    
     let bgImage, origW, origH;
+    let history = [];
+    let activeColorBtn = colorRedBtn;
+    
+    // 管理番号入力で自動フィールド埋め
+    managementNumber.addEventListener("input", e => {
+      const value = e.target.value;
+      const info = carData[value] || {};
+      
+      ["manufacturer", "car_model", "prefecture", "class_no", "hiragana", "serial_no"].forEach(id => {
+        document.getElementById(id).value = info[id] || "";
+      });
+      
+      if (info.manufacturer) {
+        managementNumber.style.borderColor = "#2ecc71";
+      } else if (value) {
+        managementNumber.style.borderColor = "#e74c3c";
+      } else {
+        managementNumber.style.borderColor = "#ddd";
+      }
+    });
+
+    // 背景画像設定
     function setBackground() {
-      fabric.Image.fromURL("carcheck.png", img => {
-        origW = img.width; origH = img.height;
-        img.set({ selectable: false, originX: "left", originY: "top" });
+      fabric.Image.fromURL("https://example.com/carcheck.png", img => {
+        // NOTE: 実際のプロジェクトでは、この画像URLを実際の車両チェック用画像のURLに置き換えてください
+        origW = img.width || 800; 
+        origH = img.height || 600;
+        
+        img.set({ 
+          selectable: false, 
+          originX: "left", 
+          originY: "top" 
+        });
+        
         bgImage = img;
         canvas.setBackgroundImage(bgImage, canvas.renderAll.bind(canvas));
         resizeCanvas();
-      });
+      }, { crossOrigin: 'anonymous' });
     }
+    
+    // キャンバスリサイズ
     function resizeCanvas() {
-      const cw = window.innerWidth * 0.9;
+      const modalContent = document.querySelector('.modal-content');
+      const maxWidth = modalContent.clientWidth - 40; // パディングを考慮
+      
       const aspect = origH / origW;
-      const newW = cw;
+      const newW = Math.min(maxWidth, origW);
       const newH = newW * aspect;
+      
       canvas.setWidth(newW);
       canvas.setHeight(newH);
-      bgImage.scaleToWidth(newW);
+      
+      if (bgImage) {
+        bgImage.scaleToWidth(newW);
+      }
+      
       canvas.renderAll();
     }
+    
+    // 初期化時に背景画像設定
     setBackground();
-    window.addEventListener("resize", () => { if (modal.style.display === "flex") resizeCanvas(); });
+    
+    // ウィンドウリサイズ時にキャンバスもリサイズ
+    window.addEventListener("resize", () => { 
+      if (modal.style.display === "flex") {
+        resizeCanvas();
+      }
+    });
 
-    // ドローイングモード切替 & Undo履歴
-    let history = [];
+    // キャンバスの描画設定
+    canvas.freeDrawingBrush.width = 3;
+    canvas.freeDrawingBrush.color = "red";
+    
+    // パスが作成されたらUndoのために履歴を保持
     canvas.on('path:created', function(event) {
       history.push(event.path);
     });
-    function enableDrawing() { canvas.isDrawingMode = true; }
-    function disableDrawing() { canvas.isDrawingMode = false; }
-    document.getElementById("undo-button").onclick = () => {
+    
+    // 色ボタンの状態更新
+    function updateColorBtnStates() {
+      colorRedBtn.classList.remove('active');
+      colorBlackBtn.classList.remove('active');
+      activeColorBtn.classList.add('active');
+    }
+    
+    // 赤ペン選択
+    colorRedBtn.addEventListener("click", () => {
+      canvas.freeDrawingBrush.color = "red";
+      activeColorBtn = colorRedBtn;
+      updateColorBtnStates();
+    });
+
+    // 黒ペン選択
+    colorBlackBtn.addEventListener("click", () => {
+      canvas.freeDrawingBrush.color = "black";
+      activeColorBtn = colorBlackBtn;
+      updateColorBtnStates();
+    });
+    
+    // 元に戻すボタン
+    undoBtn.addEventListener("click", () => {
       const last = history.pop();
-      if (last) canvas.remove(last);
-    };
-
-// ペン色切替
-canvas.freeDrawingBrush.width = 3;
-canvas.freeDrawingBrush.color = "red";
-
-// 赤ペン
-document.getElementById("color-red").addEventListener("click", () => {
-  canvas.freeDrawingBrush.color = "red";
-});
-
-// 黒ペン
-document.getElementById("color-black").addEventListener("click", () => {
-  canvas.freeDrawingBrush.color = "black";
-});
-
-
-    // 描画完了
-    document.getElementById("finish-button").onclick = () => {
+      if (last) {
+        canvas.remove(last);
+        canvas.renderAll();
+      }
+    });
+    
+    // モーダル開閉
+    openModalBtn.addEventListener("click", () => { 
+      modal.style.display = "flex"; 
+      canvas.isDrawingMode = true;
+      resizeCanvas();
+    });
+    
+    closeModalBtn.addEventListener("click", () => { 
+      modal.style.display = "none"; 
+    });
+    
+    // 描画完了ボタン
+    finishBtn.addEventListener("click", () => {
       canvas.isDrawingMode = false;
       modal.style.display = "none";
-    };
-
-    // 送信時Blob化
-    document.getElementById("rental-form").addEventListener("submit", function(e) {
-      e.preventDefault(); canvas.isDrawingMode = false; canvas.discardActiveObject(); canvas.renderAll();
-      canvas.toBlob(blob => {
-        const dt = new DataTransfer();
-        dt.items.add(new File([blob], "carcheck_annotated.png", { type: "image/png" }));
-        document.getElementById("annotated_image").files = dt.files;
-        e.target.submit();
-      });
     });
+    
+    // フォーム送信処理
+    rentalForm.addEventListener("submit", function(e) {
+      e.preventDefault();
+      
+      // 必須項目のチェック
+      const requiredFields = rentalForm.querySelectorAll('[required]');
+      let isValid = true;
+      
+      requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+          field.style.borderColor = "#e74c3c";
+          isValid = false;
+        } else {
+          field.style.borderColor = "#ddd";
+        }
+      });
+      
+      if (!isValid) {
+        alert('必須項目を入力してください');
+        return;
+      }
+      
+      // ロード中表示
+      loadingSpinner.classList.add('active');
+      submitBtn.disabled = true;
+      
+      // キャンバスを画像に変換
+      canvas.isDrawingMode = false;
+      canvas.discardActiveObject();
+      canvas.renderAll();
+      
+      try {
+        canvas.toBlob(blob => {
+          if (!blob) {
+            console.error('キャンバスを画像に変換できませんでした');
+            alert('エラーが発生しました。もう一度お試しください。');
+            loadingSpinner.classList.remove('active');
+            submitBtn.disabled = false;
+            return;
+          }
+          
+          // ファイル作成とフォームへの割り当て
+          const filename = `carcheck_${new Date().getTime()}.png`;
+          const file = new File([blob], filename, { type: "image/png" });
+          
+          // DataTransfer APIを使用してファイル割り当て（モダンブラウザ用）
+          if (window.DataTransfer) {
+            try {
+              const dt = new DataTransfer();
+              dt.items.add(file);
+              annotatedImage.files = dt.files;
+            } catch (err) {
+              console.error('DataTransfer APIエラー:', err);
+              // 代替手段として直接フォームデータに追加
+              const formData = new FormData(rentalForm);
+              formData.append('annotated_image', file);
+              
+              // フェッチAPIでフォーム送信
+              fetch(rentalForm.action, {
+                method: 'POST',
+                body: formData
+              })
+              .then(response => {
+                if (response.ok) {
+                  window.location.href = 'thank_you.html'; // 成功ページにリダイレクト
+                } else {
+                  throw new Error('送信に失敗しました');
+                }
+              })
+              .catch(error => {
+                console.error('送信エラー:', error);
+                alert('送信に失敗しました。もう一度お試しください。');
+              })
+              .finally(() => {
+                loadingSpinner.classList.remove('active');
+                submitBtn.disabled = false;
+              });
+              
+              return; // フェッチAPI使用時はここで処理を終了
+            }
+          }
+          
+          // 通常のフォーム送信
+          rentalForm.submit();
+          
+        }, 'image/png');
+      } catch (error) {
+        console.error('キャンバス変換エラー:', error);
+        alert('エラーが発生しました。もう一度お試しください。');
+        loadingSpinner.classList.remove('active');
+        submitBtn.disabled = false;
+      }
+    });
+    
+    // エスケープキーでモーダルを閉じる
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && modal.style.display === 'flex') {
+        modal.style.display = 'none';
+      }
+    });
+    
+    // モーダル外クリックで閉じる
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+    
+    // 初期状態
+    updateColorBtnStates();
   </script>
 </body>
 </html>
