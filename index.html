@@ -511,10 +511,9 @@
       }
     });
 
-    // 背景画像設定
+     // 背景画像設定
     function setBackground() {
-      fabric.Image.fromURL("https://example.com/carcheck.png", img => {
-        // NOTE: 実際のプロジェクトでは、この画像URLを実際の車両チェック用画像のURLに置き換えてください
+      fabric.Image.fromURL("carcheck.png", img => {
         origW = img.width || 800; 
         origH = img.height || 600;
         
@@ -527,7 +526,7 @@
         bgImage = img;
         canvas.setBackgroundImage(bgImage, canvas.renderAll.bind(canvas));
         resizeCanvas();
-      }, { crossOrigin: 'anonymous' });
+      });
     }
     
     // キャンバスリサイズ
