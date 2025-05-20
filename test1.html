@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="レンタカーの延長・返却予定を確認するフォーム">
+    <title>レンタカー延長・返却確認フォーム</title>
+    <!-- Google Fonts - 最適化 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0069d9;
+            --primary-hover: #0053a6;
+            --bg-color: #f4f6f8;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #cccccc;
+            --border-radius: 6px;
+            --transition-speed: 0.3s;
+            --shadow: 0 4px 12px rgba(0,0,0,0.1);
+            --font-family: 'Roboto', sans-serif;
+        }
+        
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            padding: 20px;
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 2rem;
+        }
+        
+        h2 {
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+            color: var(--primary-color);
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        input[type="text"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+        }
+        
+        input[type="text"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 105, 217, 0.2);
+        }
+        
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            margin-top: 1rem;
+            background-color: var(--primary-color);
+            color: #fff;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color var(--transition-speed);
+        }
+        
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+        
+        .example {
+            font-size: 0.875rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+        
+        /* Notes container animation */
+        #notes-container {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: max-height var(--transition-speed) ease, 
+                        opacity var(--transition-speed) ease, 
+                        margin var(--transition-speed) ease;
+            margin-top: 0;
+        }
+        
+        #notes-container.active {
+            max-height: 200px;
+            opacity: 1;
+            margin-top: 1.25rem;
+        }
+        
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 1.5rem;
+            }
+            
+            button {
+                padding: 0.875rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>レンタカー延長・返却確認フォーム</h2>
+    <form id="rental-form" action="https://ssgform.com/s/sRQIv0YeO3pA" method="post">
+        <div class="form-group">
+            <label for="name">ご契約者名</label>
+            <input type="text" id="name" name="ご契約者名" placeholder="例）石巻 太郎" required autocomplete="name">
+        </div>
+
+        <div class="form-group">
+            <label for="action">延長または返却について選択してください</label>
+            <select id="action" name="契約状況" aria-describedby="action-description">
+                <option value="現在の契約内容で延長を希望">【延長】現在の契約内容で延長を希望</option>
+                <option value="利用期間を変更して延長を希望">【延長】利用期間を変更して延長を希望</option>
+                <option value="延長せず、返却を希望">【返却】延長せず、返却を希望</option>
+            </select>
+            <span id="action-description" class="sr-only">選択内容によって追加情報の入力が必要になります</span>
+        </div>
+
+        <div id="notes-container" class="form-group">
+            <label for="notes">備考（詳細を入力してください）</label>
+            <textarea id="notes" name="備考" rows="4"></textarea>
+            <div class="example" id="notes-example"></div>
+        </div>
+
+        <button type="submit">送信する</button>
+    </form>
+</div>
+
+<script>
+    // DOM要素のキャッシュ
+    const actionSelect = document.getElementById('action');
+    const notesContainer = document.getElementById('notes-container');
+    const notesInput = document.getElementById('notes');
+    const notesExample = document.getElementById('notes-example');
+    
+    // 選択内容に基づいて備考欄の表示を更新する関数
+    function updateNotes() {
+        const selectedValue = actionSelect.value;
+        const isNotesRequired = selectedValue !== "現在の契約内容で延長を希望";
+        
+        // 備考欄の表示・非表示を切り替え
+        notesContainer.classList.toggle('active', isNotesRequired);
+        
+        // required属性の設定
+        if (isNotesRequired) {
+            notesInput.setAttribute('required', '');
+        } else {
+            notesInput.removeAttribute('required');
+            // 非表示にする前に値をクリア
+            notesInput.value = '';
+        }
+        
+        // 選択内容に応じてプレースホルダーと例文を設定
+        switch(selectedValue) {
+            case "利用期間を変更して延長を希望":
+                notesInput.placeholder = "●月●日まで利用します。";
+                notesExample.textContent = "記入例：1月15日まで利用します。";
+                break;
+            case "延長せず、返却を希望":
+                notesInput.placeholder = "●月●日●時に返却予定です。";
+                notesExample.textContent = "記入例：1月2日15時に返却予定です。";
+                break;
+            default:
+                notesInput.placeholder = "";
+                notesExample.textContent = "";
+                break;
+        }
+    }
+    
+    // selectの変更イベントにリスナーを追加
+    actionSelect.addEventListener('change', updateNotes);
+    
+    // ページ読み込み時に初期状態を設定
+    document.addEventListener('DOMContentLoaded', updateNotes);
+</script>
+
+</body>
+</html>
