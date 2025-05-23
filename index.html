@@ -93,12 +93,18 @@
       transform: translateY(1px);
     }
     
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
     .btn-primary {
       background-color: var(--primary-color);
       color: white;
     }
     
-    .btn-primary:hover {
+    .btn-primary:hover:not(:disabled) {
       background-color: var(--secondary-color);
     }
     
@@ -108,7 +114,7 @@
       border: 1px solid var(--primary-color);
     }
     
-    .btn-secondary:hover {
+    .btn-secondary:hover:not(:disabled) {
       background-color: rgba(52, 152, 219, 0.1);
     }
     
@@ -119,14 +125,14 @@
       margin-top: 1.5rem;
     }
     
-    .btn-submit:hover {
+    .btn-submit:hover:not(:disabled) {
       background-color: #c0392b;
     }
     
     .color-btn { 
       width: 2.5rem; 
       height: 2.5rem; 
-      border: none; 
+      border: 2px solid #ccc; 
       margin-right: .5rem; 
       cursor: pointer;
       border-radius: 50%;
@@ -141,6 +147,7 @@
     
     .color-btn.active {
       box-shadow: 0 0 0 3px white, 0 0 0 5px var(--primary-color);
+      border-color: var(--primary-color);
     }
     
     /* モーダルスタイル */
@@ -170,7 +177,7 @@
       box-sizing: border-box;
       border-radius: 8px;
       box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-      overflow: hidden; /* スクロールを防止 */
+      overflow: hidden;
     }
     
     #close-modal {
@@ -183,21 +190,31 @@
       cursor: pointer;
       color: #666;
       z-index: 10;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
     #close-modal:hover {
       color: var(--accent-color);
     }
     
+    #canvas-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+    
     #canvas { 
       border: 1px solid var(--border-color); 
-      width: 100%; 
-      height: auto;
-      flex: 1;
       cursor: crosshair;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      display: block;
-      margin: 0 auto;
+      max-width: 100%;
+      max-height: 100%;
     }
     
     #modal-controls { 
@@ -320,6 +337,20 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+    
+    .error-message {
+      color: var(--accent-color);
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+      display: none;
+    }
+    
+    .success-message {
+      color: #27ae60;
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -329,16 +360,20 @@
     <div class="form-group">
       <label class="required">ご契約名義</label>
       <input type="text" name="contract_name" required placeholder="契約者のお名前">
+      <div class="error-message">契約名義を入力してください</div>
     </div>
     
     <div class="form-group">
       <label class="required">メールアドレス</label>
       <input type="email" name="email" required placeholder="example@example.com">
+      <div class="error-message">正しいメールアドレスを入力してください</div>
     </div>
     
     <div class="form-group">
       <label class="required">管理番号</label>
-      <input type="number" id="management_number" name="management_number" required placeholder="1～56を入力">
+      <input type="number" id="management_number" name="management_number" required placeholder="1～56を入力" min="1" max="99">
+      <div class="error-message">1～56の範囲で管理番号を入力してください</div>
+      <div class="success-message">車両情報が見つかりました</div>
     </div>
     
     <div class="form-group">
@@ -373,14 +408,15 @@
     
     <div class="form-group">
       <label class="required">貸出時走行距離(km)</label>
-      <input type="number" name="mileage" required placeholder="例:12345">
+      <input type="number" name="mileage" required placeholder="例:12345" min="0">
+      <div class="error-message">走行距離を入力してください</div>
     </div>
     
     <div class="text-center mt-1">
       <button type="button" id="open-modal" class="btn btn-primary">車両キズを記録する</button>
     </div>
     
-    <input type="file" name="annotated_image" id="annotated_image" style="display:none;">
+    <input type="file" name="annotated_image" id="annotated_image" style="display:none;" accept="image/*">
     
     <button type="submit" id="submit-button" class="btn btn-submit">送信する</button>
   </form>
@@ -391,7 +427,9 @@
       <h3 id="modal-title">車両キズチェック</h3>
       <p id="modal-instructions">車両の傷や損傷箇所を図に描き込んでください。赤ペンで既存のキズ、黒ペンで新しいキズを描いてください。</p>
       
-      <canvas id="canvas"></canvas>
+      <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+      </div>
       
       <div id="modal-controls">
         <div id="drawing-controls">
@@ -403,6 +441,7 @@
         
         <div class="btn-group">
           <button type="button" id="undo-button" class="btn btn-secondary">元に戻す</button>
+          <button type="button" id="clear-button" class="btn btn-secondary">全消去</button>
           <button type="button" id="finish-button" class="btn btn-primary">描画完了</button>
         </div>
       </div>
@@ -416,66 +455,65 @@
   <script src="https://unpkg.com/fabric@4.6.0/dist/fabric.min.js"></script>
   <script>
     // 車両データ
-   const carData = {
-  "1":  { manufacturer: "ホンダ",    car_model: "ライフ（薄茶）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4520" },
-  "2":  { manufacturer: "日産",      car_model: "廃車トッポ（茶色）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4521" },
-  "3":  { manufacturer: "ホンダ",    car_model: "ライフ（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4522" },
-  "4":  { manufacturer: "ホンダ",    car_model: "ライフ（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4523" },
-  "5":  { manufacturer: "スバル",    car_model: "廃車ステラ（ベージュ）",   prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4524" },
-  "6":  { manufacturer: "ホンダ",    car_model: "ライフ（グレー）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4525" },
-  "7":  { manufacturer: "マツダ",    car_model: "AZワゴン（シルバー）",     prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4526" },
-  "8":  { manufacturer: "日産",      car_model: "ピノ（白）",               prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4527" },
-  "9":  { manufacturer: "ホンダ",    car_model: "フィット(白)",             prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2212" },
-  "10": { manufacturer: "ホンダ",    car_model: "フィット（黒）",           prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2636" },
-  "11": { manufacturer: "トヨタ",    car_model: "ヴィッツ（シルバー）",     prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2292" },
-  "12": { manufacturer: "ホンダ",    car_model: "ライフ（赤茶色）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4558" },
-  "13": { manufacturer: "ダイハツ",  car_model: "ハイゼット（白）",         prefecture: "宮城", class_no: "480", hiragana: "わ", serial_no: "5191" },
-  "14": { manufacturer: "ホンダ",    car_model: "フィットハイブリッド（シルバー）", prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2392" },
-  "15": { manufacturer: "ホンダ",    car_model: "ライフ（ベージュ色）",     prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4593" },
-  "16": { manufacturer: "スズキ",    car_model: "アルトラパン",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4594" },
-  "17": { manufacturer: "スズキ",    car_model: "セルボ",                   prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4595" },
-  "18": { manufacturer: "スズキ",    car_model: "ワゴンR",                   prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4615" },
-  "19": { manufacturer: "ホンダ",    car_model: "フィットハイブリッド（シルバー）", prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2401" },
-  "20": { manufacturer: "ホンダ",    car_model: "ライフ（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4619" },
-  "21": { manufacturer: "ホンダ",    car_model: "バモス（茶色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4633" },
-  "22": { manufacturer: "日産",      car_model: "モコ（茶色）",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4662" },
-  "23": { manufacturer: "ダイハツ",  car_model: "ミラ（シルバー）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4664" },
-  "24": { manufacturer: "ホンダ",    car_model: "フィットハイブリッド（白）", prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2559" },
-  "25": { manufacturer: "スズキ",    car_model: "アルト（緑系）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4752" },
-  "26": { manufacturer: "スズキ",    car_model: "アルト（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4753" },
-  "27": { manufacturer: "ダイハツ",  car_model: "ミラ（ピンク）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4770" },
-  "28": { manufacturer: "日産",      car_model: "オッティ（白）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4771" },
-  "29": { manufacturer: "スバル",    car_model: "プレオバン（シルバー）",   prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5381" },
-  "30": { manufacturer: "スズキ",    car_model: "アルト（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4830" },
-  "99": { manufacturer: "ダイハツ",  car_model: "ハイゼット（ダンプ型）",   prefecture: "宮城", class_no: "480", hiragana: "わ", serial_no: "5389" },
-  "31": { manufacturer: "日産",      car_model: "オッティ（水色）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4892" },
-  "32": { manufacturer: "スバル",    car_model: "プレオバン（白）",         prefecture: "宮城", class_no: "480", hiragana: "わ", serial_no: "5450" },
-  "33": { manufacturer: "ダイハツ",  car_model: "エッセ（クリーム色）",     prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4986" },
-  "34": { manufacturer: "ホンダ",    car_model: "ライフ（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5019" },
-  "35": { manufacturer: "スズキ",    car_model: "MRワゴン",                  prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5021" },
-  "36": { manufacturer: "三菱",      car_model: "eKワゴン",                  prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5020" },
-  "37": { manufacturer: "スズキ",    car_model: "MRワゴン（水色）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5035" },
-  "38": { manufacturer: "スバル",    car_model: "ステラ（白）",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5102" },
-  "39": { manufacturer: "スズキ",    car_model: "アルト（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5115" },
-  "40": { manufacturer: "ダイハツ",  car_model: "ムーブ（黒色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5271" },
-  "41": { manufacturer: "スズキ",    car_model: "アルト（ベージュ）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5307" },
-  "42": { manufacturer: "日産",      car_model: "オッティ（黒色）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5313" },
-  "43": { manufacturer: "ホンダ",    car_model: "ライフ（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5323" },
-  "44": { manufacturer: "ホンダ",    car_model: "ライフ（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5330" },
-  "45": { manufacturer: "スズキ",    car_model: "アルト（茶色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5348" },
-  "46": { manufacturer: "三菱",      car_model: "eKワゴン(白)",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5357" },
-  "47": { manufacturer: "ダイハツ",  car_model: "ミラ（白）",               prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5393" },
-  "48": { manufacturer: "スズキ",    car_model: "アルトラパン（茶）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5463" },
-  "49": { manufacturer: "スズキ",    car_model: "アルト(茶)",               prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5510" },
-  "50": { manufacturer: "ホンダ",    car_model: "フィット（黄色）",         prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "3456" },
-  "51": { manufacturer: "日産",      car_model: "モコ（ピンク）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5558" },
-  "52": { manufacturer: "マツダ",    car_model: "ファミリア",               prefecture: "宮城", class_no: "401", hiragana: "わ", serial_no: "1675" },
-  "53": { manufacturer: "スズキ",    car_model: "ワゴンR（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5710" },
-  "54": { manufacturer: "ダイハツ",  car_model: "エッセ（黒）",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5723" },
-  "55": { manufacturer: "スズキ",    car_model: "ラパン（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5765" },
-  "56": { manufacturer: "日産",      car_model: "クリッパー（黒）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "6961" }
-};
-
+    const carData = {
+      "1":  { manufacturer: "ホンダ",    car_model: "ライフ（薄茶）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4520" },
+      "2":  { manufacturer: "日産",      car_model: "廃車トッポ（茶色）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4521" },
+      "3":  { manufacturer: "ホンダ",    car_model: "ライフ（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4522" },
+      "4":  { manufacturer: "ホンダ",    car_model: "ライフ（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4523" },
+      "5":  { manufacturer: "スバル",    car_model: "廃車ステラ（ベージュ）",   prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4524" },
+      "6":  { manufacturer: "ホンダ",    car_model: "ライフ（グレー）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4525" },
+      "7":  { manufacturer: "マツダ",    car_model: "AZワゴン（シルバー）",     prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4526" },
+      "8":  { manufacturer: "日産",      car_model: "ピノ（白）",               prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4527" },
+      "9":  { manufacturer: "ホンダ",    car_model: "フィット(白)",             prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2212" },
+      "10": { manufacturer: "ホンダ",    car_model: "フィット（黒）",           prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2636" },
+      "11": { manufacturer: "トヨタ",    car_model: "ヴィッツ（シルバー）",     prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2292" },
+      "12": { manufacturer: "ホンダ",    car_model: "ライフ（赤茶色）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4558" },
+      "13": { manufacturer: "ダイハツ",  car_model: "ハイゼット（白）",         prefecture: "宮城", class_no: "480", hiragana: "わ", serial_no: "5191" },
+      "14": { manufacturer: "ホンダ",    car_model: "フィットハイブリッド（シルバー）", prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2392" },
+      "15": { manufacturer: "ホンダ",    car_model: "ライフ（ベージュ色）",     prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4593" },
+      "16": { manufacturer: "スズキ",    car_model: "アルトラパン",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4594" },
+      "17": { manufacturer: "スズキ",    car_model: "セルボ",                   prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4595" },
+      "18": { manufacturer: "スズキ",    car_model: "ワゴンR",                   prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4615" },
+      "19": { manufacturer: "ホンダ",    car_model: "フィットハイブリッド（シルバー）", prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2401" },
+      "20": { manufacturer: "ホンダ",    car_model: "ライフ（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4619" },
+      "21": { manufacturer: "ホンダ",    car_model: "バモス（茶色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4633" },
+      "22": { manufacturer: "日産",      car_model: "モコ（茶色）",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4662" },
+      "23": { manufacturer: "ダイハツ",  car_model: "ミラ（シルバー）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4664" },
+      "24": { manufacturer: "ホンダ",    car_model: "フィットハイブリッド（白）", prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "2559" },
+      "25": { manufacturer: "スズキ",    car_model: "アルト（緑系）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4752" },
+      "26": { manufacturer: "スズキ",    car_model: "アルト（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4753" },
+      "27": { manufacturer: "ダイハツ",  car_model: "ミラ（ピンク）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4770" },
+      "28": { manufacturer: "日産",      car_model: "オッティ（白）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4771" },
+      "29": { manufacturer: "スバル",    car_model: "プレオバン（シルバー）",   prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5381" },
+      "30": { manufacturer: "スズキ",    car_model: "アルト（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4830" },
+      "99": { manufacturer: "ダイハツ",  car_model: "ハイゼット（ダンプ型）",   prefecture: "宮城", class_no: "480", hiragana: "わ", serial_no: "5389" },
+      "31": { manufacturer: "日産",      car_model: "オッティ（水色）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4892" },
+      "32": { manufacturer: "スバル",    car_model: "プレオバン（白）",         prefecture: "宮城", class_no: "480", hiragana: "わ", serial_no: "5450" },
+      "33": { manufacturer: "ダイハツ",  car_model: "エッセ（クリーム色）",     prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "4986" },
+      "34": { manufacturer: "ホンダ",    car_model: "ライフ（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5019" },
+      "35": { manufacturer: "スズキ",    car_model: "MRワゴン",                  prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5021" },
+      "36": { manufacturer: "三菱",      car_model: "eKワゴン",                  prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5020" },
+      "37": { manufacturer: "スズキ",    car_model: "MRワゴン（水色）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5035" },
+      "38": { manufacturer: "スバル",    car_model: "ステラ（白）",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5102" },
+      "39": { manufacturer: "スズキ",    car_model: "アルト（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5115" },
+      "40": { manufacturer: "ダイハツ",  car_model: "ムーブ（黒色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5271" },
+      "41": { manufacturer: "スズキ",    car_model: "アルト（ベージュ）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5307" },
+      "42": { manufacturer: "日産",      car_model: "オッティ（黒色）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5313" },
+      "43": { manufacturer: "ホンダ",    car_model: "ライフ（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5323" },
+      "44": { manufacturer: "ホンダ",    car_model: "ライフ（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5330" },
+      "45": { manufacturer: "スズキ",    car_model: "アルト（茶色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5348" },
+      "46": { manufacturer: "三菱",      car_model: "eKワゴン(白)",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5357" },
+      "47": { manufacturer: "ダイハツ",  car_model: "ミラ（白）",               prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5393" },
+      "48": { manufacturer: "スズキ",    car_model: "アルトラパン（茶）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5463" },
+      "49": { manufacturer: "スズキ",    car_model: "アルト(茶)",               prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5510" },
+      "50": { manufacturer: "ホンダ",    car_model: "フィット（黄色）",         prefecture: "宮城", class_no: "502", hiragana: "わ", serial_no: "3456" },
+      "51": { manufacturer: "日産",      car_model: "モコ（ピンク）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5558" },
+      "52": { manufacturer: "マツダ",    car_model: "ファミリア",               prefecture: "宮城", class_no: "401", hiragana: "わ", serial_no: "1675" },
+      "53": { manufacturer: "スズキ",    car_model: "ワゴンR（シルバー）",       prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5710" },
+      "54": { manufacturer: "ダイハツ",  car_model: "エッセ（黒）",             prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5723" },
+      "55": { manufacturer: "スズキ",    car_model: "ラパン（水色）",           prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "5765" },
+      "56": { manufacturer: "日産",      car_model: "クリッパー（黒）",         prefecture: "宮城", class_no: "580", hiragana: "わ", serial_no: "6961" }
+    };
 
     // DOM要素
     const modal = document.getElementById("canvasModal");
@@ -484,6 +522,7 @@
     const closeModalBtn = document.getElementById("close-modal");
     const finishBtn = document.getElementById("finish-button");
     const undoBtn = document.getElementById("undo-button");
+    const clearBtn = document.getElementById("clear-button");
     const colorRedBtn = document.getElementById("color-red");
     const colorBlackBtn = document.getElementById("color-black");
     const rentalForm = document.getElementById("rental-form");
@@ -492,45 +531,168 @@
     const annotatedImage = document.getElementById("annotated_image");
 
     // Fabric.js キャンバス初期化
-    const canvas = new fabric.Canvas("canvas", { 
-      isDrawingMode: true,
-      selection: false
-    });
-    
-    let bgImage, origW, origH;
+    let canvas = null;
+    let bgImage = null;
+    let origW = 800;
+    let origH = 600;
     let history = [];
     let activeColorBtn = colorRedBtn;
-    
-    // 管理番号入力で自動フィールド埋め
-    managementNumber.addEventListener("input", e => {
-      const value = e.target.value;
-      const info = carData[value] || {};
+    let isCanvasInitialized = false;
+
+    // キャンバス初期化関数
+    function initializeCanvas() {
+      if (isCanvasInitialized) return;
       
-      ["manufacturer", "car_model", "prefecture", "class_no", "hiragana", "serial_no"].forEach(id => {
-        document.getElementById(id).value = info[id] || "";
+      canvas = new fabric.Canvas("canvas", { 
+        isDrawingMode: true,
+        selection: false
       });
       
+      // キャンバスの描画設定
+      canvas.freeDrawingBrush.width = 3;
+      canvas.freeDrawingBrush.color = "red";
+      
+      // パスが作成されたらUndoのために履歴を保持
+      canvas.on('path:created', function(event) {
+         history.push(event.path);
+      });
+      
+      isCanvasInitialized = true;
+      setBackground();
+    }
+
+    // エラーメッセージ表示関数
+    function showError(input, message) {
+      const errorElement = input.nextElementSibling;
+      const successElement = input.parentNode.querySelector('.success-message');
+      
+      input.style.borderColor = "#e74c3c";
+      if (errorElement && errorElement.classList.contains('error-message')) {
+        errorElement.textContent = message || errorElement.textContent;
+        errorElement.style.display = 'block';
+      }
+      if (successElement) {
+        successElement.style.display = 'none';
+      }
+    }
+
+    function hideError(input) {
+      const errorElement = input.nextElementSibling;
+      
+      input.style.borderColor = "#ddd";
+      if (errorElement && errorElement.classList.contains('error-message')) {
+        errorElement.style.display = 'none';
+      }
+    }
+
+    function showSuccess(input, message) {
+      const errorElement = input.nextElementSibling;
+      const successElement = input.parentNode.querySelector('.success-message');
+      
+      input.style.borderColor = "#2ecc71";
+      if (errorElement && errorElement.classList.contains('error-message')) {
+        errorElement.style.display = 'none';
+      }
+      if (successElement) {
+        successElement.textContent = message || successElement.textContent;
+        successElement.style.display = 'block';
+      }
+    }
+
+    // 管理番号入力で自動フィールド埋め
+    managementNumber.addEventListener("input", function(e) {
+      const value = e.target.value.trim();
+      const info = carData[value] || {};
+      
+      // フィールドクリア
+      ["manufacturer", "car_model", "prefecture", "class_no", "hiragana", "serial_no"].forEach(id => {
+        const field = document.getElementById(id);
+        if (field) field.value = "";
+      });
+      
+      if (value === "") {
+        hideError(managementNumber);
+        return;
+      }
+      
       if (info.manufacturer) {
-        managementNumber.style.borderColor = "#2ecc71";
-      } else if (value) {
-        managementNumber.style.borderColor = "#e74c3c";
+        // データが見つかった場合
+        ["manufacturer", "car_model", "prefecture", "class_no", "hiragana", "serial_no"].forEach(id => {
+          const field = document.getElementById(id);
+          if (field && info[id]) {
+            field.value = info[id];
+          }
+        });
+        showSuccess(managementNumber, "車両情報が見つかりました");
       } else {
-        managementNumber.style.borderColor = "#ddd";
+        // データが見つからない場合
+        showError(managementNumber, "該当する管理番号が見つかりません");
       }
     });
 
     // 背景画像設定
     function setBackground() {
-      fabric.Image.fromURL("carcheck.png", img => {
+      if (!canvas) return;
+      
+      fabric.Image.fromURL("data:image/svg+xml;base64," + btoa(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+          <rect width="800" height="600" fill="#f0f0f0" stroke="#333" stroke-width="2"/>
+          <text x="400" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#333">車両キズチェック図</text>
+          
+          <!-- 車の上面図 -->
+          <g transform="translate(100, 100)">
+            <rect x="0" y="0" width="200" height="400" fill="white" stroke="#333" stroke-width="2" rx="20"/>
+            <text x="100" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#333">上面図</text>
+            
+            <!-- フロントガラス -->
+            <rect x="20" y="50" width="160" height="30" fill="#e6f3ff" stroke="#333" stroke-width="1"/>
+            <text x="100" y="70" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">フロント</text>
+            
+            <!-- リアガラス -->
+            <rect x="20" y="320" width="160" height="30" fill="#e6f3ff" stroke="#333" stroke-width="1"/>
+            <text x="100" y="340" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">リア</text>
+            
+            <!-- ドア -->
+            <rect x="5" y="100" width="15" height="80" fill="#fff2e6" stroke="#333" stroke-width="1"/>
+            <rect x="180" y="100" width="15" height="80" fill="#fff2e6" stroke="#333" stroke-width="1"/>
+            <rect x="5" y="220" width="15" height="80" fill="#fff2e6" stroke="#333" stroke-width="1"/>
+            <rect x="180" y="220" width="15" height="80" fill="#fff2e6" stroke="#333" stroke-width="1"/>
+          </g>
+          
+          <!-- 車の側面図 -->
+          <g transform="translate(400, 100)">
+            <rect x="0" y="100" width="300" height="100" fill="white" stroke="#333" stroke-width="2" rx="10"/>
+            <text x="150" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#333">側面図</text>
+            
+            <!-- タイヤ -->
+            <circle cx="50" cy="220" r="20" fill="#333" stroke="#333" stroke-width="2"/>
+            <circle cx="250" cy="220" r="20" fill="#333" stroke="#333" stroke-width="2"/>
+            
+            <!-- ウィンドウ -->
+            <rect x="50" y="110" width="200" height="40" fill="#e6f3ff" stroke="#333" stroke-width="1"/>
+            
+            <!-- ドア線 -->
+            <line x1="100" y1="150" x2="100" y2="200" stroke="#333" stroke-width="1"/>
+            <line x1="200" y1="150" x2="200" y2="200" stroke="#333" stroke-width="1"/>
+          </g>
+          
+          <!-- 凡例 -->
+          <g transform="translate(50, 450)">
+            <text x="0" y="20" font-family="Arial, sans-serif" font-size="16" fill="#333">凡例:</text>
+            <circle cx="20" cy="50" r="8" fill="red"/>
+            <text x="40" y="55" font-family="Arial, sans-serif" font-size="14" fill="#333">既存のキズ（赤）</text>
+            <circle cx="20" cy="80" r="8" fill="black"/>
+            <text x="40" y="85" font-family="Arial, sans-serif" font-size="14" fill="#333">新しいキズ（黒）</text>
+          </g>
+        </svg>
+      `), function(img) {
         origW = img.width || 800; 
         origH = img.height || 600;
         
-        // 画像を180度回転（上下逆を修正）
         img.set({ 
           selectable: false, 
           originX: "left", 
-          originY: "top",
-          angle: 180 // 画像を180度回転
+          originY: "top"
         });
         
         bgImage = img;
@@ -541,23 +703,25 @@
     
     // キャンバスリサイズ
     function resizeCanvas() {
-      const modalContent = document.querySelector('.modal-content');
-      const modalWidth = modalContent.clientWidth - 40; // パディングを考慮
-      const modalHeight = modalContent.clientHeight - 200; // ヘッダーとコントロール部分の高さを考慮
+      if (!canvas || !bgImage) return;
       
-      // 画像のアスペクト比を維持しながら、モーダル内に収まる最大サイズを計算
+      const container = document.getElementById('canvas-container');
+      const containerWidth = container.clientWidth - 20;
+      const containerHeight = container.clientHeight - 20;
+      
+      // 画像のアスペクト比を維持しながら、コンテナ内に収まる最大サイズを計算
       const imgRatio = origH / origW;
-      const containerRatio = modalHeight / modalWidth;
+      const containerRatio = containerHeight / containerWidth;
       
       let newW, newH;
       
       if (containerRatio > imgRatio) {
         // 横幅に合わせる
-        newW = modalWidth;
+        newW = containerWidth;
         newH = newW * imgRatio;
       } else {
         // 高さに合わせる
-        newH = modalHeight;
+        newH = containerHeight;
         newW = newH / imgRatio;
       }
       
@@ -565,36 +729,17 @@
       canvas.setHeight(newH);
       
       if (bgImage) {
-        // 画像をキャンバスのサイズに合わせてスケール
         bgImage.scaleToWidth(newW);
-        
-        // 画像の中心点をキャンバスの中心に設定（回転時に使用）
-        bgImage.originX = 'center';
-        bgImage.originY = 'center';
-        bgImage.left = newW / 2;
-        bgImage.top = newH / 2;
       }
       
       canvas.renderAll();
     }
     
-    // 初期化時に背景画像設定
-    setBackground();
-    
     // ウィンドウリサイズ時にキャンバスもリサイズ
-    window.addEventListener("resize", () => { 
-      if (modal.style.display === "flex") {
-        resizeCanvas();
+    window.addEventListener("resize", function() { 
+      if (modal.style.display === "flex" && canvas) {
+        setTimeout(resizeCanvas, 100);
       }
-    });
-
-    // キャンバスの描画設定
-    canvas.freeDrawingBrush.width = 3;
-    canvas.freeDrawingBrush.color = "red";
-    
-    // パスが作成されたらUndoのために履歴を保持
-    canvas.on('path:created', function(event) {
-      history.push(event.path);
     });
     
     // 色ボタンの状態更新
@@ -605,64 +750,117 @@
     }
     
     // 赤ペン選択
-    colorRedBtn.addEventListener("click", () => {
-      canvas.freeDrawingBrush.color = "red";
-      activeColorBtn = colorRedBtn;
-      updateColorBtnStates();
+    colorRedBtn.addEventListener("click", function() {
+      if (canvas) {
+        canvas.freeDrawingBrush.color = "red";
+        activeColorBtn = colorRedBtn;
+        updateColorBtnStates();
+      }
     });
 
     // 黒ペン選択
-    colorBlackBtn.addEventListener("click", () => {
-      canvas.freeDrawingBrush.color = "black";
-      activeColorBtn = colorBlackBtn;
-      updateColorBtnStates();
+    colorBlackBtn.addEventListener("click", function() {
+      if (canvas) {
+        canvas.freeDrawingBrush.color = "black";
+        activeColorBtn = colorBlackBtn;
+        updateColorBtnStates();
+      }
     });
     
     // 元に戻すボタン
-    undoBtn.addEventListener("click", () => {
-      const last = history.pop();
-      if (last) {
+    undoBtn.addEventListener("click", function() {
+      if (canvas && history.length > 0) {
+        const last = history.pop();
         canvas.remove(last);
         canvas.renderAll();
       }
     });
     
-    // モーダル開閉
-    openModalBtn.addEventListener("click", () => { 
-      modal.style.display = "flex"; 
-      canvas.isDrawingMode = true;
-      resizeCanvas();
+    // 全消去ボタン
+    clearBtn.addEventListener("click", function() {
+      if (canvas) {
+        const objects = canvas.getObjects().filter(obj => obj !== bgImage);
+        objects.forEach(obj => canvas.remove(obj));
+        history = [];
+        canvas.renderAll();
+      }
     });
     
-    closeModalBtn.addEventListener("click", () => { 
+    // モーダル開閉
+    openModalBtn.addEventListener("click", function() { 
+      modal.style.display = "flex";
+      
+      if (!isCanvasInitialized) {
+        initializeCanvas();
+      }
+      
+      if (canvas) {
+        canvas.isDrawingMode = true;
+        setTimeout(resizeCanvas, 100);
+      }
+    });
+    
+    closeModalBtn.addEventListener("click", function() { 
       modal.style.display = "none"; 
     });
     
     // 描画完了ボタン
-    finishBtn.addEventListener("click", () => {
-      canvas.isDrawingMode = false;
+    finishBtn.addEventListener("click", function() {
+      if (canvas) {
+        canvas.isDrawingMode = false;
+      }
       modal.style.display = "none";
     });
+    
+    // フォームバリデーション
+    function validateForm() {
+      let isValid = true;
+      const requiredFields = rentalForm.querySelectorAll('[required]');
+      
+      requiredFields.forEach(function(field) {
+        const value = field.value.trim();
+        
+        if (!value) {
+          showError(field, field.getAttribute('placeholder') ? 
+            field.getAttribute('placeholder').replace('例:', '').replace('を入力', 'を入力してください') : 
+            'この項目は必須です');
+          isValid = false;
+        } else {
+          // 特別なバリデーション
+          if (field.type === 'email' && !isValidEmail(value)) {
+            showError(field, '正しいメールアドレスを入力してください');
+            isValid = false;
+          } else if (field.type === 'number') {
+            const num = parseInt(value);
+            if (field.id === 'management_number' && (!carData[value] || num < 1 || num > 99)) {
+              showError(field, '1～56の範囲で有効な管理番号を入力してください');
+              isValid = false;
+            } else if (field.name === 'mileage' && num < 0) {
+              showError(field, '0以上の数値を入力してください');
+              isValid = false;
+            } else {
+              hideError(field);
+            }
+          } else {
+            hideError(field);
+          }
+        }
+      });
+      
+      return isValid;
+    }
+    
+    function isValidEmail(email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    }
     
     // フォーム送信処理
     rentalForm.addEventListener("submit", function(e) {
       e.preventDefault();
       
-      // 必須項目のチェック
-      const requiredFields = rentalForm.querySelectorAll('[required]');
-      let isValid = true;
-      
-      requiredFields.forEach(field => {
-        if (!field.value.trim()) {
-          field.style.borderColor = "#e74c3c";
-          isValid = false;
-        } else {
-          field.style.borderColor = "#ddd";
-        }
-      });
-      
-      if (!isValid) {
-        alert('必須項目を入力してください');
+      // バリデーション
+      if (!validateForm()) {
         return;
       }
       
@@ -671,70 +869,88 @@
       submitBtn.disabled = true;
       
       // キャンバスを画像に変換
-      canvas.isDrawingMode = false;
-      canvas.discardActiveObject();
-      canvas.renderAll();
-      
-      try {
-        canvas.toBlob(blob => {
-          if (!blob) {
-            console.error('キャンバスを画像に変換できませんでした');
-            alert('エラーが発生しました。もう一度お試しください。');
-            loadingSpinner.classList.remove('active');
-            submitBtn.disabled = false;
-            return;
-          }
-          
-          // ファイル作成とフォームへの割り当て
-          const filename = `carcheck_${new Date().getTime()}.png`;
-          const file = new File([blob], filename, { type: "image/png" });
-          
-          // DataTransfer APIを使用してファイル割り当て（モダンブラウザ用）
-          if (window.DataTransfer) {
-            try {
-              const dt = new DataTransfer();
-              dt.items.add(file);
-              annotatedImage.files = dt.files;
-            } catch (err) {
-              console.error('DataTransfer APIエラー:', err);
-              // 代替手段として直接フォームデータに追加
-              const formData = new FormData(rentalForm);
-              formData.append('annotated_image', file);
-              
-              // フェッチAPIでフォーム送信
-              fetch(rentalForm.action, {
-                method: 'POST',
-                body: formData
-              })
-              .then(response => {
-                if (response.ok) {
-                  window.location.href = 'thank_you.html'; // 成功ページにリダイレクト
-                } else {
-                  throw new Error('送信に失敗しました');
-                }
-              })
-              .catch(error => {
-                console.error('送信エラー:', error);
-                alert('送信に失敗しました。もう一度お試しください。');
-              })
-              .finally(() => {
-                loadingSpinner.classList.remove('active');
-                submitBtn.disabled = false;
-              });
-              
-              return; // フェッチAPI使用時はここで処理を終了
+      if (canvas) {
+        canvas.isDrawingMode = false;
+        canvas.discardActiveObject();
+        canvas.renderAll();
+        
+        try {
+          canvas.toBlob(function(blob) {
+            if (!blob) {
+              console.error('キャンバスを画像に変換できませんでした');
+              alert('エラーが発生しました。もう一度お試しください。');
+              loadingSpinner.classList.remove('active');
+              submitBtn.disabled = false;
+              return;
             }
+            
+            // ファイル作成とフォームへの割り当て
+            const filename = `carcheck_${new Date().getTime()}.png`;
+            const file = new File([blob], filename, { type: "image/png" });
+            
+            // FormDataを使用してフォーム送信
+            const formData = new FormData(rentalForm);
+            formData.set('annotated_image', file);
+            
+            // フェッチAPIでフォーム送信
+            fetch(rentalForm.action, {
+              method: 'POST',
+              body: formData
+            })
+            .then(function(response) {
+              if (response.ok) {
+                alert('送信が完了しました。ありがとうございました。');
+                rentalForm.reset();
+                if (canvas) {
+                  const objects = canvas.getObjects().filter(obj => obj !== bgImage);
+                  objects.forEach(obj => canvas.remove(obj));
+                  history = [];
+                  canvas.renderAll();
+                }
+              } else {
+                throw new Error('送信に失敗しました');
+              }
+            })
+            .catch(function(error) {
+              console.error('送信エラー:', error);
+              alert('送信に失敗しました。もう一度お試しください。');
+            })
+            .finally(function() {
+              loadingSpinner.classList.remove('active');
+              submitBtn.disabled = false;
+            });
+            
+          }, 'image/png', 0.9);
+        } catch (error) {
+          console.error('キャンバス変換エラー:', error);
+          alert('エラーが発生しました。もう一度お試しください。');
+          loadingSpinner.classList.remove('active');
+          submitBtn.disabled = false;
+        }
+      } else {
+        // キャンバスが初期化されていない場合の通常送信
+        const formData = new FormData(rentalForm);
+        
+        fetch(rentalForm.action, {
+          method: 'POST',
+          body: formData
+        })
+        .then(function(response) {
+          if (response.ok) {
+            alert('送信が完了しました。ありがとうございました。');
+            rentalForm.reset();
+          } else {
+            throw new Error('送信に失敗しました');
           }
-          
-          // 通常のフォーム送信
-          rentalForm.submit();
-          
-        }, 'image/png');
-      } catch (error) {
-        console.error('キャンバス変換エラー:', error);
-        alert('エラーが発生しました。もう一度お試しください。');
-        loadingSpinner.classList.remove('active');
-        submitBtn.disabled = false;
+        })
+        .catch(function(error) {
+          console.error('送信エラー:', error);
+          alert('送信に失敗しました。もう一度お試しください。');
+        })
+        .finally(function() {
+          loadingSpinner.classList.remove('active');
+          submitBtn.disabled = false;
+        });
       }
     });
     
@@ -752,8 +968,44 @@
       }
     });
     
-    // 初期状態
+    // リアルタイムバリデーション
+    const inputs = rentalForm.querySelectorAll('input[required]');
+    inputs.forEach(function(input) {
+      input.addEventListener('blur', function() {
+        const value = this.value.trim();
+        
+        if (!value) {
+          showError(this);
+        } else if (this.type === 'email' && !isValidEmail(value)) {
+          showError(this, '正しいメールアドレスを入力してください');
+        } else if (this.type === 'number') {
+          const num = parseInt(value);
+          if (this.id === 'management_number' && (!carData[value] || num < 1 || num > 99)) {
+            showError(this, '1～56の範囲で有効な管理番号を入力してください');
+          } else if (this.name === 'mileage' && num < 0) {
+            showError(this, '0以上の数値を入力してください');
+          } else {
+            hideError(this);
+          }
+        } else {
+          hideError(this);
+        }
+      });
+      
+      input.addEventListener('input', function() {
+        if (this.style.borderColor === 'rgb(231, 76, 60)') { // エラー状態の場合
+          hideError(this);
+        }
+      });
+    });
+    
+    // 初期状態設定
     updateColorBtnStates();
+    
+    // ページ読み込み完了後の処理
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('車両キズチェックフォームが読み込まれました');
+    });
   </script>
 </body>
 </html>
